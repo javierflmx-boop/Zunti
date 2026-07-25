@@ -939,7 +939,7 @@ function openInterestModal(propId){
     <div class="field"><label>Phone number</label><input id="liPhone" placeholder="(407) 555-0100"/></div>
     <div class="field"><label>Email</label><input id="liEmail" type="email" placeholder="you@email.com"/></div>
     <div class="field"><label>How many people will be living here?</label><input id="liHousehold" type="number" placeholder="3"/></div>
-    <div class="field"><label>When are you available to move?</label><input id="liDate" placeholder="e.g. Within 2 weeks"/></div>
+    <div class="field"><label>When are you available to move?</label><input id="liDate" type="date" min="${new Date().toISOString().split('T')[0]}"/></div>
     <div class="field"><label>How much down payment do you have available?</label><input id="liDown" type="number" placeholder="10000"/></div>
     <div class="field"><label>Monthly budget</label><input id="liBudget" type="number" placeholder="1800"/></div>
     <button class="btn btn-primary" onclick="submitInterest('${propId}')">Submit</button>
