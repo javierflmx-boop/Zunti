@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -57,6 +58,7 @@
     background: var(--cream);
     color: #221E18;
   }
+  .public-theme h1, .public-theme h2{ color: #221E18; }
   .public-theme .p-card{
     background: #fff;
     border: 1px solid #E9E0D2;
@@ -518,8 +520,8 @@ async function deleteProperty(id){
 
 async function submitLead(profileId, data){
   const { error } = await db.from('leads').insert({
-    profile_id: profileId, name: data.name, phone: data.phone,
-    down_payment: data.downPayment, budget: data.budget,
+    profile_id: profileId, name: data.name, phone: data.phone, email: data.email,
+    down_payment: data.downPayment, budget: data.budget, household_size: data.householdSize,
     move_date: data.moveDate, property_title: data.propertyTitle, status: 'new'
   });
   if(error){ showToast('Something went wrong — try again'); return false; }
@@ -931,13 +933,15 @@ function openInterestModal(propId){
   overlay.id='modalOverlay';
   overlay.innerHTML = `
   <div class="modal public-theme public-modal">
-    <div class="modal-header"><div><div class="eyebrow">${escapeHtml(prop.title)}</div><h2>Tell us about your budget</h2></div><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <p class="muted" style="margin-bottom:16px;">Takes 30 seconds. We'll only reach out if it's a fit.</p>
+    <div class="modal-header"><div><div class="eyebrow">${escapeHtml(prop.title)}</div><h2>I'm interested</h2></div><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <p class="muted" style="margin-bottom:16px;">Takes a minute. We'll only reach out if it's a fit.</p>
     <div class="field"><label>Your name</label><input id="liName" placeholder="Full name"/></div>
     <div class="field"><label>Phone number</label><input id="liPhone" placeholder="(407) 555-0100"/></div>
+    <div class="field"><label>Email</label><input id="liEmail" type="email" placeholder="you@email.com"/></div>
+    <div class="field"><label>How many people will be living here?</label><input id="liHousehold" type="number" placeholder="3"/></div>
+    <div class="field"><label>When are you available to move?</label><input id="liDate" placeholder="e.g. Within 2 weeks"/></div>
     <div class="field"><label>How much down payment do you have available?</label><input id="liDown" type="number" placeholder="10000"/></div>
     <div class="field"><label>Monthly budget</label><input id="liBudget" type="number" placeholder="1800"/></div>
-    <div class="field"><label>When do you need to move in?</label><input id="liDate" placeholder="e.g. Within 2 weeks"/></div>
     <button class="btn btn-primary" onclick="submitInterest('${propId}')">Submit</button>
   </div>`;
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
@@ -947,12 +951,14 @@ function openInterestModal(propId){
 async function submitInterest(propId){
   const name = document.getElementById('liName').value.trim();
   const phone = document.getElementById('liPhone').value.trim();
+  const email = document.getElementById('liEmail').value.trim();
+  const householdSize = document.getElementById('liHousehold').value;
   const downPayment = document.getElementById('liDown').value;
   const budget = document.getElementById('liBudget').value;
   const moveDate = document.getElementById('liDate').value.trim();
   if(!name || !phone || downPayment===''){ showToast('Name, phone, and down payment are required'); return; }
   const prop = state.publicProperties.find(p=>p.id===propId);
-  const ok = await submitLead(state.publicProfile.id, { name, phone, downPayment, budget, moveDate, propertyTitle: prop ? prop.title : '' });
+  const ok = await submitLead(state.publicProfile.id, { name, phone, email, householdSize, downPayment, budget, moveDate, propertyTitle: prop ? prop.title : '' });
   if(!ok) return;
   closeModal();
   showConfirmModal();
@@ -984,8 +990,10 @@ function openLeadDetail(id){
     <div class="modal-header"><div><div class="eyebrow">${l.property_title ? escapeHtml(l.property_title) : 'Lead'}</div><h2>${escapeHtml(l.name)}</h2></div><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="card" style="margin-bottom:14px;">
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Phone</span><span>${escapeHtml(l.phone||'-')}</span></div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Email</span><span>${escapeHtml(l.email||'-')}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Down payment</span><span class="mono" style="color:var(--gold); font-weight:700;">${fmtMoney(l.down_payment)}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Monthly budget</span><span>${fmtMoney(l.budget)}</span></div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Household size</span><span>${escapeHtml(l.household_size||'-')}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Move-in</span><span>${escapeHtml(l.move_date||'-')}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Submitted</span><span>${timeAgo(l.created_at)}</span></div>
     </div>
@@ -1065,10 +1073,13 @@ function render(){
 
   if(state.route === 'public'){
     app.className = 'public-theme';
+    const isOwnerPreview = state.currentUser && state.profile && state.profile.slug === state.publicSlug;
     app.innerHTML = `
       <div class="topbar">
         <div class="brand" style="color:#221E18;"><span class="dot"></span>Zunti</div>
-        <div class="topbar-sub" style="color:#8A7F6E;">Powered by Zunti</div>
+        ${isOwnerPreview
+          ? `<button class="nav-btn-outline" style="border-color:#DCD0BA; color:#221E18; padding:6px 12px;" onclick="location.hash='#/dashboard'">← Back to dashboard</button>`
+          : `<div class="topbar-sub" style="color:#8A7F6E;">Powered by Zunti</div>`}
       </div>
       <main>${viewPublic()}</main>
     `;
