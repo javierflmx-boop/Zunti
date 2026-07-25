@@ -549,6 +549,7 @@ async function addProperty(data, files){
   const { error } = await db.from('properties').insert({
     id: propId, profile_id: state.currentUser.id,
     title: data.title, address: data.address, price: data.price, beds: data.beds,
+    down_payment_required: data.downPaymentRequired,
     photo_urls: photoUrls
   });
   if(error){ showToast(error.message); return; }
@@ -829,9 +830,10 @@ function viewProperties(){
           </div>
           <button onclick="deleteProperty('${p.id}')" style="background:none;border:none;color:var(--text-faint);cursor:pointer;">${ICONS.x}</button>
         </div>
-        <div style="display:flex; align-items:center; gap:14px; margin-top:10px;">
+        <div style="display:flex; align-items:center; gap:14px; margin-top:10px; flex-wrap:wrap;">
           <div class="prop-price">${fmtMoney(p.price)}/mo</div>
           <div class="muted" style="display:flex; align-items:center; gap:5px;">${ICONS.bed.replace('width="24"','width="15"').replace('height="24"','height="15"')} ${escapeHtml(p.beds||'-')} bed</div>
+          ${p.down_payment_required ? `<span class="badge badge-orange">${fmtMoney(p.down_payment_required)} down</span>` : ''}
         </div>
       </div>
     </div>`).join('')}
@@ -899,7 +901,10 @@ function viewPublic(){
         <h2>${escapeHtml(p.title)}</h2>
         <div class="muted">${escapeHtml(p.address||'')}</div>
         <div style="display:flex; align-items:center; justify-content:space-between; margin-top:10px;">
-          <div class="prop-price">${fmtMoney(p.price)}/mo</div>
+          <div>
+            <div class="prop-price">${fmtMoney(p.price)}/mo</div>
+            ${p.down_payment_required ? `<div class="muted" style="font-size:12px; margin-top:2px;">${fmtMoney(p.down_payment_required)} down required</div>` : ''}
+          </div>
           <span style="color:var(--orange); font-weight:700; font-size:13px; display:flex; align-items:center; gap:4px;">I'm interested ${ICONS.chevRight.replace('currentColor','#FF6B00')}</span>
         </div>
       </div>
@@ -955,6 +960,7 @@ function openAddPropertyModal(){
     <div class="field"><label>Title</label><input id="mpTitle" placeholder="e.g. 3/2 house near Lake Nona"/></div>
     <div class="field"><label>Address</label><input id="mpAddress" placeholder="Street, city"/></div>
     <div class="field"><label>Monthly rent</label><input id="mpPrice" type="number" placeholder="1800"/></div>
+    <div class="field"><label>Down payment required</label><input id="mpDown" type="number" placeholder="3000"/></div>
     <div class="field"><label>Bedrooms</label><input id="mpBeds" type="number" placeholder="3"/></div>
     <div class="field">
       <label>Outside photo</label>
@@ -974,13 +980,14 @@ async function submitAddProperty(){
   const title = document.getElementById('mpTitle').value.trim();
   const address = document.getElementById('mpAddress').value.trim();
   const price = document.getElementById('mpPrice').value;
+  const downPaymentRequired = document.getElementById('mpDown').value;
   const beds = document.getElementById('mpBeds').value;
   if(!title || !price){ showToast('Add a title and rent amount'); return; }
   const f1 = document.getElementById('mpPhoto1').files[0];
   const f2 = document.getElementById('mpPhoto2').files[0];
   const btn = document.getElementById('mpSubmitBtn');
   btn.disabled = true; btn.textContent = 'Adding…';
-  await addProperty({title, address, price, beds}, [f1, f2]);
+  await addProperty({title, address, price, beds, downPaymentRequired}, [f1, f2]);
   closeModal();
 }
 
