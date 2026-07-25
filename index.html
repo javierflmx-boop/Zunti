@@ -501,10 +501,54 @@ async function logout(){
   await route();
 }
 
-async function addProperty(data){
+// ---------------- Photo handling ----------------
+function compressImage(file, maxSize, quality){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w > h && w > maxSize){ h = Math.round(h*(maxSize/w)); w = maxSize; }
+        else if(h > maxSize){ w = Math.round(w*(maxSize/h)); h = maxSize; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob=>resolve(blob), 'image/jpeg', quality);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadPropertyPhotos(propId, files){
+  const urls = [];
+  for(let i=0; i<files.length && i<2; i++){
+    if(!files[i]) continue;
+    const blob = await compressImage(files[i], 1024, 0.7);
+    const path = `${state.currentUser.id}/${propId}/${i+1}.jpg`;
+    const { error } = await db.storage.from('property-photos').upload(path, blob, { upsert:true, contentType:'image/jpeg' });
+    if(error){ console.error(error); continue; }
+    const { data } = db.storage.from('property-photos').getPublicUrl(path);
+    urls.push(data.publicUrl);
+  }
+  return urls;
+}
+
+async function addProperty(data, files){
+  const propId = crypto.randomUUID();
+  let photoUrls = [];
+  if(files && files.length){
+    showToast('Uploading photos…');
+    photoUrls = await uploadPropertyPhotos(propId, files);
+  }
   const { error } = await db.from('properties').insert({
-    profile_id: state.currentUser.id,
-    title: data.title, address: data.address, price: data.price, beds: data.beds
+    id: propId, profile_id: state.currentUser.id,
+    title: data.title, address: data.address, price: data.price, beds: data.beds,
+    photo_urls: photoUrls
   });
   if(error){ showToast(error.message); return; }
   await loadPrivate();
@@ -513,6 +557,7 @@ async function addProperty(data){
 }
 
 async function deleteProperty(id){
+  await db.storage.from('property-photos').remove([`${state.currentUser.id}/${id}/1.jpg`, `${state.currentUser.id}/${id}/2.jpg`]);
   await db.from('properties').delete().eq('id', id);
   state.properties = state.properties.filter(p=>p.id!==id);
   render();
@@ -774,7 +819,7 @@ function viewProperties(){
   ${state.properties.length===0 ? emptyState('No properties yet','Add your first one so people can express interest.') :
     state.properties.map(p=>`
     <div class="prop-card">
-      <div class="prop-img">No photo yet</div>
+      <div class="prop-img" ${p.photo_urls && p.photo_urls[0] ? `style="background-image:url('${escapeHtml(p.photo_urls[0])}'); background-size:cover; background-position:center;"` : ''}>${p.photo_urls && p.photo_urls[0] ? '' : 'No photo yet'}</div>
       <div class="prop-body">
         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
           <div>
@@ -848,7 +893,7 @@ function viewPublic(){
   ${state.publicProperties.length===0 ? `<div class="empty p-dim">No properties listed right now.</div>` :
    state.publicProperties.map(p=>`
     <div class="public-prop-card" onclick="openInterestModal('${p.id}')">
-      <div class="public-prop-img">No photo yet</div>
+      <div class="public-prop-img" ${p.photo_urls && p.photo_urls[0] ? `style="background-image:url('${escapeHtml(p.photo_urls[0])}'); background-size:cover; background-position:center;"` : ''}>${p.photo_urls && p.photo_urls[0] ? '' : 'No photo yet'}</div>
       <div class="prop-body">
         <h2>${escapeHtml(p.title)}</h2>
         <div class="muted">${escapeHtml(p.address||'')}</div>
@@ -910,19 +955,31 @@ function openAddPropertyModal(){
     <div class="field"><label>Address</label><input id="mpAddress" placeholder="Street, city"/></div>
     <div class="field"><label>Monthly rent</label><input id="mpPrice" type="number" placeholder="1800"/></div>
     <div class="field"><label>Bedrooms</label><input id="mpBeds" type="number" placeholder="3"/></div>
-    <button class="btn btn-primary" onclick="submitAddProperty()">Add property</button>
+    <div class="field">
+      <label>Outside photo</label>
+      <input id="mpPhoto1" type="file" accept="image/*"/>
+    </div>
+    <div class="field">
+      <label>Inside photo</label>
+      <input id="mpPhoto2" type="file" accept="image/*"/>
+    </div>
+    <button class="btn btn-primary" id="mpSubmitBtn" onclick="submitAddProperty()">Add property</button>
   </div>`;
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
   document.body.appendChild(overlay);
 }
 
-function submitAddProperty(){
+async function submitAddProperty(){
   const title = document.getElementById('mpTitle').value.trim();
   const address = document.getElementById('mpAddress').value.trim();
   const price = document.getElementById('mpPrice').value;
   const beds = document.getElementById('mpBeds').value;
   if(!title || !price){ showToast('Add a title and rent amount'); return; }
-  addProperty({title, address, price, beds});
+  const f1 = document.getElementById('mpPhoto1').files[0];
+  const f2 = document.getElementById('mpPhoto2').files[0];
+  const btn = document.getElementById('mpSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Adding…';
+  await addProperty({title, address, price, beds}, [f1, f2]);
   closeModal();
 }
 
