@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zunti — Qualify before you drive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0F0E0C;
+    --bg-elevated: #17150F;
+    --card: #1B1812;
+    --line: #2B271D;
+    --orange: #FF6A1F;
+    --gold: #FF6A1F;
+    --cream: #F7F1E8;
+    --text: #F0EAE0;
+    --text-dim: #A79C8C;
+    --text-faint: #695F50;
+    --good: #4ADE80;
+    --warn: #FF6A1F;
+    --danger: #EF4444;
+    --radius: 4px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .display{ font-family: 'Cormorant Garamond', serif; font-weight:600; }
+  .mono{ font-family: 'Space Mono', monospace; }
+
+  #app{
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+  }
+
+  /* ---------- Public page uses light theme ---------- */
+  .public-theme{
+    background: var(--cream);
+    color: #221E18;
+  }
+  .public-theme .p-card{
+    background: #fff;
+    border: 1px solid #E9E0D2;
+  }
+  .public-theme .p-dim{ color: #8A7F6E; }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    padding: 20px 20px 14px;
+    display:flex; align-items:center; justify-content:space-between;
+    position: sticky; top:0; z-index: 20;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .public-theme .topbar{ background: var(--cream); border-bottom: 1px solid #E9E0D2; }
+  .brand{
+    display:flex; align-items:center; gap:9px;
+    font-family:'Cormorant Garamond', serif; font-weight:600; font-size:24px; letter-spacing:0.01em;
+  }
+  .brand .dot{ width:6px; height:6px; border-radius:50%; background:var(--orange); box-shadow: 0 0 10px var(--orange);}
+  .topbar-sub{ font-size:11px; color:var(--text-faint); font-family:'Outfit'; letter-spacing:0.04em; }
+
+  main{ flex:1; padding: 18px 18px 100px; }
+
+  /* ---------- Bottom nav ---------- */
+  .bottomnav{
+    position: sticky; bottom:0; left:0; right:0;
+    background: rgba(20,18,15,0.92);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--line);
+    display:flex; justify-content: space-around;
+    padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
+    z-index: 30;
+  }
+  .navbtn{
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    background:none; border:none; color: var(--text-faint);
+    font-family:'Inter'; font-size:10.5px; font-weight:600;
+    cursor:pointer; padding:6px 10px; border-radius:12px;
+    transition: color .15s ease;
+  }
+  .navbtn svg{ width:22px; height:22px; }
+  .navbtn.active{ color: var(--orange); }
+  .navbtn.active svg{ filter: drop-shadow(0 0 6px rgba(255,107,0,0.5)); }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    font-family:'Outfit'; font-weight:500; font-size:14px; letter-spacing:0.03em;
+    border-radius: 2px; border:none; cursor:pointer;
+    padding: 15px 20px; width:100%;
+    transition: opacity .15s ease;
+  }
+  .btn:active{ opacity:0.85; }
+  .btn-primary{ background: var(--orange); color: #0F0E0C; }
+  .btn-primary:hover{ opacity:0.9; }
+  .btn-ghost{ background: transparent; color: var(--text); border:1px solid var(--line); }
+  .btn-outline-light{ background:transparent; color:#221E18; border:1px solid #221E18; }
+
+  input, textarea, select{
+    width:100%; background: transparent; border:none; border-bottom:1px solid var(--line);
+    color: var(--text); border-radius:0; padding:12px 2px;
+    font-family:'Outfit'; font-weight:300; font-size:16px; outline:none;
+  }
+  .public-theme input, .public-theme textarea, .public-theme select{
+    background:transparent; border-bottom:1px solid #DCD0BA; color:#221E18;
+  }
+  input:focus, textarea:focus, select:focus{ border-color: var(--orange); }
+  label{ font-size:11px; font-weight:500; color:var(--text-faint); display:block; margin-bottom:8px; letter-spacing:0.08em; text-transform:uppercase; }
+  .public-theme label{ color:#8A7F6E; }
+  .field{ margin-bottom:20px; }
+
+  .card{ background: var(--card); border:1px solid var(--line); border-radius: var(--radius); padding:20px; }
+
+  h1{ font-family:'Cormorant Garamond', serif; font-weight:600; font-size:32px; letter-spacing:0.01em; }
+  h2{ font-family:'Cormorant Garamond', serif; font-weight:600; font-size:22px; letter-spacing:0.01em; margin-bottom:4px;}
+  .eyebrow{ font-size:10.5px; font-weight:500; letter-spacing:0.18em; text-transform:uppercase; color:var(--orange); margin-bottom:8px;}
+  .muted{ color:var(--text-dim); font-size:14px; line-height:1.6; font-weight:300; }
+  .public-theme .muted{ color:#8A7F6E; }
+
+  /* Lead rank card - signature element */
+  .lead-row{
+    display:flex; align-items:center; gap:16px;
+    background:transparent; border:none; border-bottom:1px solid var(--line); border-radius:0;
+    padding:16px 2px;
+  }
+  .rank-badge{
+    width:30px; height:30px; border-radius:0; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Mono'; font-weight:700; font-size:13px;
+    background: var(--bg-elevated); color: var(--text-faint); border:1px solid var(--line);
+  }
+  .rank-badge.gold{ background: rgba(255,184,0,0.12); color: var(--gold); border-color: rgba(255,184,0,0.3); }
+  .lead-info{ flex:1; min-width:0; }
+  .lead-name{ font-weight:700; font-size:15px; }
+  .lead-meta{ font-size:12px; color:var(--text-faint); margin-top:2px; }
+  .lead-amount{ text-align:right; }
+  .lead-amount .num{ font-family:'Space Mono'; font-weight:700; font-size:17px; color: var(--gold); }
+  .lead-amount .lbl{ font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.06em;}
+
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px; }
+  .stat-card{ background:transparent; border:none; border-bottom:1px solid var(--line); border-radius:0; padding:16px 4px; }
+  .stat-num{ font-family:'Space Mono'; font-weight:700; font-size:22px; color:var(--orange); }
+  .stat-lbl{ font-size:11.5px; color:var(--text-dim); margin-top:2px; }
+
+  .prop-card{
+    background:transparent; border:none; border-bottom:1px solid var(--line); border-radius:0; overflow:hidden; margin-bottom:0; padding-bottom:18px; margin-top:18px;
+  }
+  .prop-img{ height:120px; background: linear-gradient(135deg, #2A241B, #14120F); display:flex; align-items:center; justify-content:center; color:var(--text-faint); font-size:12px;}
+  .prop-body{ padding:14px 16px; }
+  .prop-price{ font-family:'Space Mono'; font-weight:700; color:var(--gold); font-size:16px; }
+
+  .public-prop-card{
+    background:transparent; border:none; border-bottom:1px solid #E2D8C6; border-radius:0; overflow:hidden; margin-bottom:0; padding-bottom:22px; margin-top:22px;
+    cursor:pointer;
+  }
+  .public-prop-img{ height:150px; background: linear-gradient(135deg, #EDE3D0, #F7F1E8); display:flex; align-items:center; justify-content:center; color:#B8AA92; font-size:12px;}
+
+  .badge{ display:inline-block; padding:4px 10px; border-radius:100px; font-size:11px; font-weight:700; }
+  .badge-orange{ background: rgba(255,107,0,0.14); color: var(--orange); }
+
+  .empty{ text-align:center; padding: 50px 20px; color:var(--text-faint); }
+  .empty svg{ opacity:0.35; margin-bottom:14px; }
+
+  .fab{
+    position: fixed; bottom: 90px; right: 50%; transform: translateX(200px);
+    width:52px; height:52px; border-radius:50%; background:var(--orange);
+    display:flex; align-items:center; justify-content:center; border:none; cursor:pointer;
+    box-shadow: 0 8px 24px rgba(255,107,0,0.4); z-index:25;
+  }
+  @media (max-width: 560px){ .fab{ right:20px; transform:none; } }
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    display:flex; align-items:flex-end; z-index:50;
+  }
+  .modal{
+    background: var(--bg-elevated); width:100%; max-width:480px; margin:0 auto;
+    border-radius: 24px 24px 0 0; padding: 22px 20px calc(24px + env(safe-area-inset-bottom));
+    max-height: 88vh; overflow-y:auto;
+    border-top: 1px solid var(--line);
+  }
+  .public-theme.modal, .modal.public-modal{ background:#fff; }
+  .modal-handle{ width:36px; height:4px; background:var(--line); border-radius:10px; margin: 0 auto 18px; }
+
+  .toast{
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    background: var(--gold); color:#14120F; font-weight:700; font-size:13.5px;
+    padding:12px 20px; border-radius:100px; z-index:100; box-shadow:0 8px 24px rgba(0,0,0,0.3);
+    animation: toastIn .25s ease;
+  }
+  @keyframes toastIn{ from{opacity:0; transform:translate(-50%,-10px);} to{opacity:1; transform:translate(-50%,0);} }
+
+  .link-box{
+    display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:14px 16px; margin-bottom:14px;
+  }
+  .link-box .mono{ flex:1; font-size:13px; color:var(--gold); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .copy-btn{ background:var(--orange); color:#0F0E0C; border:none; border-radius:2px; padding:9px 16px; font-weight:500; font-size:11px; letter-spacing:0.05em; text-transform:uppercase; cursor:pointer; flex-shrink:0; font-family:'Outfit'; }
+
+  .progress-track{ height:6px; background:var(--line); border-radius:10px; overflow:hidden; margin-top:8px; }
+  .progress-fill{ height:100%; background: linear-gradient(90deg, var(--orange), var(--gold)); border-radius:10px; }
+
+  .segmented{ display:flex; gap:6px; background:var(--bg-elevated); border-radius:12px; padding:4px; margin-bottom:16px; }
+  .public-theme .segmented{ background:#EFE6D5; }
+  .seg-btn{ flex:1; border:none; background:none; padding:9px; border-radius:9px; font-size:12.5px; font-weight:700; color:var(--text-faint); cursor:pointer; }
+  .seg-btn.active{ background:var(--orange); color:#14120F; }
+
+  .hero-public{ text-align:center; padding: 26px 8px 4px; }
+  .avatar-circle{
+    width:44px; height:44px; border-radius:50%; border:1px solid var(--orange);
+    display:flex; align-items:center; justify-content:center; margin:0 auto 16px;
+    font-family:'Cormorant Garamond', serif; font-weight:600; font-size:18px; color:var(--orange);
+  }
+
+  /* House hero band - dissolves into the black background at the top */
+  .house-hero{
+    position:relative; width:calc(100% + 36px); height:200px; overflow:hidden;
+    margin: -18px -18px 4px;
+    background: var(--bg-elevated);
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .public-theme .house-hero{ background: #EFE6D5; }
+  .house-hero-art{
+    width:100%; height:100%; display:flex; align-items:flex-end; justify-content:center;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.5) 30%, black 62%);
+    mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.5) 30%, black 62%);
+  }
+  .house-hero svg{ width:280px; height:auto; opacity:0.95; }
+  .house-hero .house-glow{ filter: drop-shadow(0 0 14px rgba(255,106,31,0.3)); }
+  .house-hero-caption{
+    position:absolute; top:20px; left:0; right:0; text-align:center; z-index:2;
+    font-family:'Space Mono'; font-size:9.5px; letter-spacing:0.22em; text-transform:uppercase; color:var(--text-faint);
+  }
+  .public-theme .house-hero-caption{ color:#B0A489; }
+
+  /* ---------- Landing page (Maeso-style) ---------- */
+  .landing-topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 20px; border-bottom:1px solid var(--line);
+    position:sticky; top:0; z-index:20; background:var(--bg);
+    gap:10px;
+  }
+  .landing-logo{
+    font-family:'Outfit'; font-weight:400; font-size:15px; letter-spacing:0.35em;
+    color:var(--text); text-transform:uppercase;
+  }
+  .landing-nav{ display:flex; align-items:center; gap:8px; }
+  .nav-btn-outline{
+    border:1px solid var(--line); background:transparent; color:var(--text-dim);
+    font-family:'Outfit'; font-size:10px; letter-spacing:0.1em; text-transform:uppercase;
+    padding:10px 14px; cursor:pointer; line-height:1.3; white-space:nowrap;
+  }
+  .nav-btn-solid{
+    border:none; background:var(--cream); color:#0F0E0C;
+    font-family:'Outfit'; font-weight:500; font-size:10px; letter-spacing:0.1em; text-transform:uppercase;
+    padding:10px 16px; cursor:pointer; white-space:nowrap;
+  }
+
+  .landing-hero{
+    position:relative; height:62vh; min-height:420px; overflow:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding: 0 20px;
+  }
+  .landing-hero-bg{ position:absolute; inset:0; z-index:0; }
+  .landing-hero-bg svg{ width:100%; height:100%; }
+  .landing-hero-vignette{
+    position:absolute; inset:0; z-index:1;
+    background: radial-gradient(ellipse at 50% 40%, rgba(15,14,12,0.2), rgba(15,14,12,0.88) 75%),
+                linear-gradient(180deg, rgba(15,14,12,0.5), rgba(15,14,12,0.95));
+  }
+  .landing-wordmark{
+    position:relative; z-index:2;
+    font-family:'Cormorant Garamond', serif; font-weight:500;
+    font-size: clamp(52px, 16vw, 92px); letter-spacing:0.04em; color:var(--cream); line-height:1;
+  }
+  .landing-tagline{
+    position:relative; z-index:2; margin-top:18px;
+    font-family:'Outfit'; font-size:11.5px; letter-spacing:0.32em; text-transform:uppercase; color:var(--text-dim);
+  }
+
+  .tile-grid{
+    display:grid; grid-template-columns:repeat(3,1fr);
+    border-top:1px solid var(--line); border-left:1px solid var(--line);
+  }
+  .tile{
+    border-right:1px solid var(--line); border-bottom:1px solid var(--line);
+    padding: 30px 8px; text-align:center;
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+    cursor:pointer; background:transparent; transition: background .15s ease;
+  }
+  .tile:active{ background: var(--bg-elevated); }
+  .tile svg{ width:26px; height:26px; color:var(--orange); opacity:0.9; }
+  .tile-label{
+    font-family:'Outfit'; font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-dim);
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ---------------- Storage helpers ----------------
+async function sGet(key, shared){
+  try{ const r = await window.storage.get(key, !!shared); return r ? JSON.parse(r.value) : null; }
+  catch(e){ return null; }
+}
+async function sSet(key, value, shared){
+  try{ await window.storage.set(key, JSON.stringify(value), !!shared); return true; }
+  catch(e){ console.error('storage set failed', e); return false; }
+}
+
+// ---------------- App state ----------------
+let state = {
+  mySlug: null,       // logged-in landlord slug (personal)
+  route: 'loading',
+  profile: null,
+  properties: [],
+  leads: [],
+  publicSlug: null,
+  publicProperties: [],
+  publicProfile: null,
+  selectedProperty: null,
+  loading: true,
+};
+
+function slugify(s){
+  return s.toLowerCase().trim().replace(/[^a-z0-9]+/g,'').slice(0,20) || 'user'+Math.floor(Math.random()*9999);
+}
+function fmtMoney(n){
+  n = Number(n)||0;
+  return '$' + n.toLocaleString('en-US');
+}
+function timeAgo(ts){
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff/60000);
+  if(mins < 1) return 'just now';
+  if(mins < 60) return mins+'m ago';
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return hrs+'h ago';
+  return Math.floor(hrs/24)+'d ago';
+}
+
+// ---------------- Routing ----------------
+function parseHash(){
+  const h = location.hash.replace('#','') || '/dashboard';
+  const parts = h.split('/').filter(Boolean);
+  return parts;
+}
+
+async function route(){
+  const parts = parseHash();
+  if(parts[0] === 'p' && parts[1]){
+    state.route = 'public';
+    state.publicSlug = parts[1];
+    state.selectedPropertyId = parts[3] || null;
+    await loadPublic(parts[1]);
+    render();
+    return;
+  }
+  // private area needs login
+  if(!state.mySlug){
+    state.route = 'onboard';
+    render();
+    return;
+  }
+  state.route = parts[0] || 'dashboard';
+  await loadPrivate();
+  render();
+}
+
+async function loadPrivate(){
+  state.profile = await sGet('profile:'+state.mySlug, true);
+  state.properties = (await sGet('properties:'+state.mySlug, true)) || [];
+  state.leads = (await sGet('leads:'+state.mySlug, true)) || [];
+  state.leads.sort((a,b)=> (b.downPayment||0) - (a.downPayment||0));
+}
+
+async function loadPublic(slug){
+  state.publicProfile = await sGet('profile:'+slug, true);
+  state.publicProperties = (await sGet('properties:'+slug, true)) || [];
+}
+
+// ---------------- Init ----------------
+async function init(){
+  const my = await sGet('my-slug', false);
+  state.mySlug = my ? my.slug : null;
+  window.addEventListener('hashchange', route);
+  await route();
+}
+
+// ---------------- Actions ----------------
+async function createProfile(businessName, phone){
+  let slug = slugify(businessName);
+  // ensure some uniqueness
+  const existing = await sGet('profile:'+slug, true);
+  if(existing) slug = slug + Math.floor(Math.random()*90+10);
+  const profile = { slug, businessName, phone, createdAt: Date.now() };
+  await sSet('profile:'+slug, profile, true);
+  await sSet('properties:'+slug, [], true);
+  await sSet('leads:'+slug, [], true);
+  await sSet('my-slug', {slug}, false);
+  state.mySlug = slug;
+  location.hash = '#/dashboard';
+  await route();
+}
+
+async function loginExisting(slug){
+  slug = slugify(slug);
+  const p = await sGet('profile:'+slug, true);
+  if(!p){ showToast("Can't find that link — check the spelling", true); return; }
+  await sSet('my-slug', {slug}, false);
+  state.mySlug = slug;
+  location.hash = '#/dashboard';
+  await route();
+}
+
+async function addProperty(data){
+  const prop = { id: 'pr'+Date.now(), ...data, createdAt: Date.now() };
+  const list = [prop, ...state.properties];
+  await sSet('properties:'+state.mySlug, list, true);
+  state.properties = list;
+  render();
+  showToast('Property added');
+}
+
+async function deleteProperty(id){
+  const list = state.properties.filter(p=>p.id!==id);
+  await sSet('properties:'+state.mySlug, list, true);
+  state.properties = list;
+  render();
+}
+
+async function submitLead(slug, data){
+  const leads = (await sGet('leads:'+slug, true)) || [];
+  const lead = { id:'ld'+Date.now(), ...data, createdAt: Date.now(), status:'new' };
+  leads.unshift(lead);
+  await sSet('leads:'+slug, leads, true);
+  return true;
+}
+
+async function updateLeadStatus(id, status){
+  const list = state.leads.map(l => l.id===id ? {...l, status} : l);
+  await sSet('leads:'+state.mySlug, list, true);
+  state.leads = list;
+  render();
+}
+
+let toastTimer;
+function showToast(msg){
+  let t = document.getElementById('toast');
+  if(t) t.remove();
+  t = document.createElement('div');
+  t.id='toast'; t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.remove(), 2200);
+}
+
+function copyLink(){
+  const link = location.origin + location.pathname + '#/p/' + state.mySlug;
+  navigator.clipboard?.writeText(link).catch(()=>{});
+  showToast('Link copied — post it anywhere');
+}
+
+// ---------------- House hero art ----------------
+function houseHero(caption){
+  return `
+  <div class="house-hero">
+    <div class="house-hero-caption">${caption || ''}</div>
+    <div class="house-hero-art">
+    <svg class="house-glow" viewBox="0 0 220 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="0" y1="118" x2="220" y2="118" stroke="var(--orange)" stroke-width="0.75" opacity="0.4"/>
+      <path d="M20 118V70L60 40L100 70V118" stroke="var(--orange)" stroke-width="1.4" opacity="0.65"/>
+      <rect x="30" y="86" width="14" height="32" stroke="var(--orange)" stroke-width="1.1" opacity="0.6"/>
+      <rect x="76" y="86" width="16" height="18" stroke="var(--orange)" stroke-width="1.1" opacity="0.6"/>
+      <path d="M120 118V56L172 22L220 56V118" stroke="var(--orange)" stroke-width="1.6" opacity="0.95"/>
+      <rect x="136" y="80" width="18" height="38" stroke="var(--orange)" stroke-width="1.3" opacity="0.95"/>
+      <rect x="188" y="76" width="18" height="20" stroke="var(--orange)" stroke-width="1.3" opacity="0.95"/>
+      <rect x="188" y="102" width="18" height="16" stroke="var(--orange)" stroke-width="1.3" opacity="0.95"/>
+      <line x1="172" y1="22" x2="172" y2="8" stroke="var(--orange)" stroke-width="1.3" opacity="0.95"/>
+      <circle cx="172" cy="6" r="2" fill="var(--orange)" opacity="0.95"/>
+    </svg>
+    </div>
+  </div>`;
+}
+
+// ---------------- Icons ----------------
+const ICONS = {
+  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>`,
+  building: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="1"/><path d="M9 22v-4h6v4M9 6h1M14 6h1M9 10h1M14 10h1M9 14h1M14 14h1"/></svg>`,
+  users: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  share: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+  chevRight: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`,
+  x: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`,
+  bed: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2"/></svg>`,
+  shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>`,
+  rank: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>`,
+  phone: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
+  key: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6M15.5 7.5l3 3M18.5 4.5l3 3"/></svg>`,
+};
+
+// ---------------- Views ----------------
+function heroSkylineBg(){
+  return `
+  <div class="landing-hero-bg">
+    <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="houseRow" width="80" height="300" patternUnits="userSpaceOnUse">
+          <rect width="80" height="300" fill="#17140F"/>
+          <path d="M8 210V170L28 152L48 170V210Z" fill="#1E1A12" stroke="#3A3020" stroke-width="0.6"/>
+          <rect x="22" y="185" width="12" height="25" fill="#17140F" stroke="#3A3020" stroke-width="0.5"/>
+        </pattern>
+        <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0F0E0C" stop-opacity="1"/>
+          <stop offset="0.4" stop-color="#0F0E0C" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="300" fill="url(#houseRow)"/>
+      <rect width="400" height="300" fill="url(#fade)"/>
+      <line x1="0" y1="210" x2="400" y2="210" stroke="var(--orange)" stroke-width="0.6" opacity="0.3"/>
+    </svg>
+  </div>
+  <div class="landing-hero-vignette"></div>`;
+}
+
+function viewLanding(){
+  return `
+  <div class="landing-topbar">
+    <div class="landing-logo">Zunti</div>
+    <div class="landing-nav">
+      <button class="nav-btn-outline" onclick="document.getElementById('tileGrid').scrollIntoView({behavior:'smooth'})">How it works</button>
+      <button class="nav-btn-outline" onclick="openLoginModal()">Log in</button>
+      <button class="nav-btn-solid" onclick="openJoinModal()">Join free</button>
+    </div>
+  </div>
+  <div class="landing-hero">
+    ${heroSkylineBg()}
+    <div class="landing-wordmark">Zunti</div>
+    <div class="landing-tagline">Rent with proof, not promises</div>
+  </div>
+  <div class="tile-grid" id="tileGrid">
+    <div class="tile" onclick="openJoinModal()">${ICONS.building}<div class="tile-label">List</div></div>
+    <div class="tile" onclick="openJoinModal()">${ICONS.share}<div class="tile-label">Share</div></div>
+    <div class="tile" onclick="openJoinModal()">${ICONS.shield}<div class="tile-label">Qualify</div></div>
+    <div class="tile" onclick="openJoinModal()">${ICONS.rank}<div class="tile-label">Rank</div></div>
+    <div class="tile" onclick="openJoinModal()">${ICONS.phone}<div class="tile-label">Call</div></div>
+    <div class="tile" onclick="openJoinModal()">${ICONS.key}<div class="tile-label">Close</div></div>
+  </div>
+  <div style="padding: 26px 20px 10px; text-align:center;">
+    <p class="muted" style="max-width:300px; margin:0 auto;">Post one link. Only talk to renters who already have the down payment.</p>
+  </div>
+  `;
+}
+
+function viewOnboard(){
+  return `
+  ${houseHero('Renters, qualified')}
+  <div class="hero-public" style="padding-top:30px;">
+    <h1>Zunti</h1>
+    <p class="muted" style="max-width:320px; margin: 10px auto 0;">Post one link. Only talk to renters who already have the down payment.</p>
+  </div>
+  <div style="padding: 30px 4px;">
+    <div class="segmented" id="onboardSeg">
+      <button class="seg-btn active" data-seg="new">Create profile</button>
+      <button class="seg-btn" data-seg="existing">I already have one</button>
+    </div>
+    <div id="onboardNew">
+      <div class="field">
+        <label>Business or your name</label>
+        <input id="obName" placeholder="e.g. Anish Properties" />
+      </div>
+      <div class="field">
+        <label>Phone number</label>
+        <input id="obPhone" placeholder="(407) 555-0100" />
+      </div>
+      <button class="btn btn-primary" onclick="handleCreate()">Create my link</button>
+    </div>
+    <div id="onboardExisting" style="display:none;">
+      <div class="field">
+        <label>Your link ID</label>
+        <input id="obSlug" placeholder="e.g. anish" />
+      </div>
+      <button class="btn btn-primary" onclick="handleLogin()">Open dashboard</button>
+    </div>
+  </div>`;
+}
+
+function viewDashboard(){
+  const p = state.profile;
+  const totalLeads = state.leads.length;
+  const avgDown = totalLeads ? Math.round(state.leads.reduce((s,l)=>s+(Number(l.downPayment)||0),0)/totalLeads) : 0;
+  const topLeads = state.leads.slice(0,3);
+  return `
+  <div class="eyebrow">Welcome back</div>
+  <h1 style="margin-bottom:18px;">${p ? p.businessName : ''}</h1>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-num">${state.properties.length}</div>
+      <div class="stat-lbl">Properties listed</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${totalLeads}</div>
+      <div class="stat-lbl">Leads received</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num mono" style="color:var(--gold);">${fmtMoney(avgDown)}</div>
+      <div class="stat-lbl">Avg. down payment</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${state.leads.filter(l=>l.status==='qualified').length}</div>
+      <div class="stat-lbl">Marked qualified</div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+    <h2>Top leads</h2>
+    <a href="#/leads" style="color:var(--orange); font-size:13px; font-weight:700; text-decoration:none;">See all</a>
+  </div>
+  ${topLeads.length === 0 ? emptyState('No leads yet', 'Share your link to start collecting qualified renters.') :
+    topLeads.map((l,i)=>leadRow(l,i)).join('')}
+
+  <div style="margin-top:22px;">
+    <button class="btn btn-primary" onclick="location.hash='#/share'">${ICONS.share} Share my link</button>
+  </div>
+  `;
+}
+
+function leadRow(l, i){
+  const badgeClass = i===0 ? 'gold' : '';
+  return `
+  <div class="lead-row">
+    <div class="rank-badge ${badgeClass}">${i+1}</div>
+    <div class="lead-info">
+      <div class="lead-name">${escapeHtml(l.name)}</div>
+      <div class="lead-meta">${escapeHtml(l.phone||'')} · ${timeAgo(l.createdAt)}</div>
+    </div>
+    <div class="lead-amount">
+      <div class="num">${fmtMoney(l.downPayment)}</div>
+      <div class="lbl">down</div>
+    </div>
+  </div>`;
+}
+
+function emptyState(title, sub){
+  return `<div class="empty">
+    ${ICONS.users.replace('width="24"','width="40"').replace('height="24"','height="40"')}
+    <div style="font-weight:700; margin-top:10px;">${title}</div>
+    <div class="muted" style="margin-top:4px;">${sub}</div>
+  </div>`;
+}
+
+function viewProperties(){
+  return `
+  <div class="eyebrow">Your listings</div>
+  <h1 style="margin-bottom:18px;">Properties</h1>
+  ${state.properties.length===0 ? emptyState('No properties yet','Add your first one so people can express interest.') :
+    state.properties.map(p=>`
+    <div class="prop-card">
+      <div class="prop-img">No photo yet</div>
+      <div class="prop-body">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <h2>${escapeHtml(p.title)}</h2>
+            <div class="muted">${escapeHtml(p.address||'')}</div>
+          </div>
+          <button onclick="deleteProperty('${p.id}')" style="background:none;border:none;color:var(--text-faint);cursor:pointer;">${ICONS.x}</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:14px; margin-top:10px;">
+          <div class="prop-price">${fmtMoney(p.price)}/mo</div>
+          <div class="muted" style="display:flex; align-items:center; gap:5px;">${ICONS.bed.replace('width="24"','width="15"').replace('height="24"','height="15"')} ${escapeHtml(p.beds||'-')} bed</div>
+        </div>
+      </div>
+    </div>`).join('')}
+  <button class="fab" onclick="openAddPropertyModal()">${ICONS.plus.replace('currentColor','#14120F')}</button>
+  `;
+}
+
+function viewLeads(){
+  return `
+  <div class="eyebrow">Ranked by down payment</div>
+  <h1 style="margin-bottom:18px;">Leads</h1>
+  ${state.leads.length===0 ? emptyState('No leads yet','Share your link to start collecting qualified renters.') :
+    state.leads.map((l,i)=>`
+    <div class="lead-row" style="align-items:flex-start; cursor:pointer;" onclick="openLeadDetail('${l.id}')">
+      <div class="rank-badge ${i===0?'gold':''}">${i+1}</div>
+      <div class="lead-info">
+        <div class="lead-name">${escapeHtml(l.name)}</div>
+        <div class="lead-meta">${escapeHtml(l.phone||'')} · budget ${fmtMoney(l.budget)}/mo · ${timeAgo(l.createdAt)}</div>
+        ${l.status && l.status!=='new' ? `<span class="badge badge-orange" style="margin-top:6px;">${l.status}</span>` : ''}
+      </div>
+      <div class="lead-amount">
+        <div class="num">${fmtMoney(l.downPayment)}</div>
+        <div class="lbl">down</div>
+      </div>
+    </div>`).join('')}
+  `;
+}
+
+function viewShare(){
+  const link = state.mySlug ? (location.origin + location.pathname + '#/p/' + state.mySlug) : '';
+  return `
+  <div class="eyebrow">Your public link</div>
+  <h1 style="margin-bottom:8px;">Share &amp; qualify</h1>
+  <p class="muted" style="margin-bottom:18px;">Post this link on Facebook Marketplace, groups, or your ad. Anyone who's interested fills out their info before you ever drive out.</p>
+  <div class="link-box">
+    <div class="mono">${link}</div>
+    <button class="copy-btn" onclick="copyLink()">Copy</button>
+  </div>
+  <div class="card" style="margin-top:8px;">
+    <h2>How it works</h2>
+    <p class="muted" style="margin-top:8px;">1. You post the link with your listing.<br>2. They tap in, see the property, and fill out down payment + budget.<br>3. You check the Leads tab — sorted highest down payment first.<br>4. Only schedule showings with people who can actually close.</p>
+  </div>
+  <button class="btn btn-ghost" style="margin-top:16px;" onclick="previewPublic()">Preview what visitors see →</button>
+  `;
+}
+
+function viewPublic(){
+  const prof = state.publicProfile;
+  if(!prof){
+    return `<div class="hero-public"><h1>Link not found</h1><p class="muted">This profile doesn't exist yet.</p></div>`;
+  }
+  const initials = prof.businessName.slice(0,2).toUpperCase();
+  return `
+  ${houseHero(escapeHtml(prof.businessName))}
+  <div class="hero-public" style="padding-top:26px;">
+    <div class="avatar-circle display">${initials}</div>
+    <h1>${escapeHtml(prof.businessName)}</h1>
+    <p class="muted">Available properties — tap one to express interest</p>
+  </div>
+  ${state.publicProperties.length===0 ? `<div class="empty p-dim">No properties listed right now.</div>` :
+   state.publicProperties.map(p=>`
+    <div class="public-prop-card" onclick="openInterestModal('${p.id}')">
+      <div class="public-prop-img">No photo yet</div>
+      <div class="prop-body">
+        <h2>${escapeHtml(p.title)}</h2>
+        <div class="muted">${escapeHtml(p.address||'')}</div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:10px;">
+          <div class="prop-price">${fmtMoney(p.price)}/mo</div>
+          <span style="color:var(--orange); font-weight:700; font-size:13px; display:flex; align-items:center; gap:4px;">I'm interested ${ICONS.chevRight.replace('currentColor','#FF6B00')}</span>
+        </div>
+      </div>
+    </div>`).join('')}
+  `;
+}
+
+function escapeHtml(s){
+  if(s===undefined||s===null) return '';
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------------- Modals ----------------
+function openJoinModal(){
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modalOverlay';
+  overlay.innerHTML = `
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="eyebrow">Join free</div>
+    <h2 style="margin-bottom:16px;">Create your link</h2>
+    <div class="field"><label>Business or your name</label><input id="obName" placeholder="e.g. Anish Properties"/></div>
+    <div class="field"><label>Phone number</label><input id="obPhone" placeholder="(407) 555-0100"/></div>
+    <button class="btn btn-primary" onclick="handleCreate()">Create my link</button>
+  </div>`;
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+  document.body.appendChild(overlay);
+}
+
+function openLoginModal(){
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modalOverlay';
+  overlay.innerHTML = `
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="eyebrow">Log in</div>
+    <h2 style="margin-bottom:16px;">Open your dashboard</h2>
+    <div class="field"><label>Your link ID</label><input id="obSlug" placeholder="e.g. anish"/></div>
+    <button class="btn btn-primary" onclick="handleLogin()">Open dashboard</button>
+  </div>`;
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+  document.body.appendChild(overlay);
+}
+
+function openAddPropertyModal(){
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modalOverlay';
+  overlay.innerHTML = `
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 style="margin-bottom:16px;">Add a property</h2>
+    <div class="field"><label>Title</label><input id="mpTitle" placeholder="e.g. 3/2 house near Lake Nona"/></div>
+    <div class="field"><label>Address</label><input id="mpAddress" placeholder="Street, city"/></div>
+    <div class="field"><label>Monthly rent</label><input id="mpPrice" type="number" placeholder="1800"/></div>
+    <div class="field"><label>Bedrooms</label><input id="mpBeds" type="number" placeholder="3"/></div>
+    <button class="btn btn-primary" onclick="submitAddProperty()">Add property</button>
+  </div>`;
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+  document.body.appendChild(overlay);
+}
+
+function submitAddProperty(){
+  const title = document.getElementById('mpTitle').value.trim();
+  const address = document.getElementById('mpAddress').value.trim();
+  const price = document.getElementById('mpPrice').value;
+  const beds = document.getElementById('mpBeds').value;
+  if(!title || !price){ showToast('Add a title and rent amount'); return; }
+  addProperty({title, address, price, beds});
+  closeModal();
+}
+
+function openInterestModal(propId){
+  const prop = state.publicProperties.find(p=>p.id===propId);
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modalOverlay';
+  overlay.innerHTML = `
+  <div class="modal public-theme public-modal">
+    <div class="modal-handle"></div>
+    <div class="eyebrow">${escapeHtml(prop.title)}</div>
+    <h2 style="margin-bottom:6px;">Tell us about your budget</h2>
+    <p class="muted" style="margin-bottom:16px;">Takes 30 seconds. We'll only reach out if it's a fit.</p>
+    <div class="field"><label>Your name</label><input id="liName" placeholder="Full name"/></div>
+    <div class="field"><label>Phone number</label><input id="liPhone" placeholder="(407) 555-0100"/></div>
+    <div class="field"><label>How much down payment do you have available?</label><input id="liDown" type="number" placeholder="10000"/></div>
+    <div class="field"><label>Monthly budget</label><input id="liBudget" type="number" placeholder="1800"/></div>
+    <div class="field"><label>When do you need to move in?</label><input id="liDate" placeholder="e.g. Within 2 weeks"/></div>
+    <button class="btn btn-primary" onclick="submitInterest('${propId}')">Submit</button>
+  </div>`;
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+  document.body.appendChild(overlay);
+}
+
+async function submitInterest(propId){
+  const name = document.getElementById('liName').value.trim();
+  const phone = document.getElementById('liPhone').value.trim();
+  const downPayment = document.getElementById('liDown').value;
+  const budget = document.getElementById('liBudget').value;
+  const moveDate = document.getElementById('liDate').value.trim();
+  if(!name || !phone || downPayment===''){ showToast('Name, phone, and down payment are required'); return; }
+  const prop = state.publicProperties.find(p=>p.id===propId);
+  await submitLead(state.publicSlug, { name, phone, downPayment, budget, moveDate, propertyTitle: prop ? prop.title : '' });
+  closeModal();
+  showConfirmModal();
+}
+
+function showConfirmModal(){
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modalOverlay';
+  overlay.innerHTML = `
+  <div class="modal public-theme public-modal" style="text-align:center; padding-top:36px;">
+    <div style="font-size:44px; margin-bottom:10px;">✓</div>
+    <h2>You're on the list</h2>
+    <p class="muted" style="margin:10px 0 20px;">They'll reach out if it's a good fit. Thanks for sharing your info up front.</p>
+    <button class="btn btn-outline-light" onclick="closeModal()">Close</button>
+  </div>`;
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+  document.body.appendChild(overlay);
+}
+
+function openLeadDetail(id){
+  const l = state.leads.find(x=>x.id===id);
+  if(!l) return;
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modalOverlay';
+  overlay.innerHTML = `
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="eyebrow">${l.propertyTitle ? escapeHtml(l.propertyTitle) : 'Lead'}</div>
+    <h2 style="margin-bottom:14px;">${escapeHtml(l.name)}</h2>
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Phone</span><span>${escapeHtml(l.phone||'-')}</span></div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Down payment</span><span class="mono" style="color:var(--gold); font-weight:700;">${fmtMoney(l.downPayment)}</span></div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Monthly budget</span><span>${fmtMoney(l.budget)}</span></div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Move-in</span><span>${escapeHtml(l.moveDate||'-')}</span></div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Submitted</span><span>${timeAgo(l.createdAt)}</span></div>
+    </div>
+    <label>Status</label>
+    <div class="segmented" style="margin-top:6px;">
+      <button class="seg-btn ${l.status==='new'?'active':''}" onclick="updateLeadStatus('${l.id}','new'); closeModal();">New</button>
+      <button class="seg-btn ${l.status==='qualified'?'active':''}" onclick="updateLeadStatus('${l.id}','qualified'); closeModal();">Qualified</button>
+      <button class="seg-btn ${l.status==='scheduled'?'active':''}" onclick="updateLeadStatus('${l.id}','scheduled'); closeModal();">Scheduled</button>
+    </div>
+    ${l.phone ? `<a class="btn btn-primary" style="margin-top:16px; text-decoration:none;" href="tel:${escapeHtml(l.phone)}">Call ${escapeHtml(l.name.split(' ')[0])}</a>` : ''}
+  </div>`;
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+  document.body.appendChild(overlay);
+}
+
+function closeModal(){
+  const o = document.getElementById('modalOverlay');
+  if(o) o.remove();
+}
+
+function previewPublic(){
+  location.hash = '#/p/' + state.mySlug;
+}
+
+function handleCreate(){
+  const name = document.getElementById('obName').value.trim();
+  const phone = document.getElementById('obPhone').value.trim();
+  if(!name){ showToast('Enter a business name'); return; }
+  createProfile(name, phone);
+}
+function handleLogin(){
+  const slug = document.getElementById('obSlug').value.trim();
+  if(!slug){ showToast('Enter your link ID'); return; }
+  loginExisting(slug);
+}
+
+// ---------------- Render shell ----------------
+function render(){
+  const app = document.getElementById('app');
+  closeModal();
+
+  if(state.route === 'onboard'){
+    app.innerHTML = viewLanding();
+    return;
+  }
+
+  if(state.route === 'public'){
+    app.className = 'public-theme';
+    app.innerHTML = `
+      <div class="topbar">
+        <div class="brand" style="color:#221E18;"><span class="dot"></span>Zunti</div>
+        <div class="topbar-sub" style="color:#8A7F6E;">Powered by Zunti</div>
+      </div>
+      <main>${viewPublic()}</main>
+    `;
+    return;
+  }
+
+  app.className = '';
+  let content = '';
+  if(state.route==='dashboard') content = viewDashboard();
+  else if(state.route==='properties') content = viewProperties();
+  else if(state.route==='leads') content = viewLeads();
+  else if(state.route==='share') content = viewShare();
+  else content = viewDashboard();
+
+  app.innerHTML = `
+    <div class="topbar">
+      <div class="brand"><span class="dot"></span>Zunti</div>
+      <div class="topbar-sub">${state.profile ? '/' + state.profile.slug : ''}</div>
+    </div>
+    <main>${content}</main>
+    <nav class="bottomnav">
+      <button class="navbtn ${state.route==='dashboard'?'active':''}" onclick="location.hash='#/dashboard'">${ICONS.home}Home</button>
+      <button class="navbtn ${state.route==='properties'?'active':''}" onclick="location.hash='#/properties'">${ICONS.building}Properties</button>
+      <button class="navbtn ${state.route==='leads'?'active':''}" onclick="location.hash='#/leads'">${ICONS.users}Leads</button>
+      <button class="navbtn ${state.route==='share'?'active':''}" onclick="location.hash='#/share'">${ICONS.share}Share</button>
+    </nav>
+  `;
+}
+
+function bindOnboardSeg(){
+  const seg = document.getElementById('onboardSeg');
+  if(!seg) return;
+  seg.querySelectorAll('.seg-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const which = btn.dataset.seg;
+      document.getElementById('onboardNew').style.display = which==='new' ? 'block':'none';
+      document.getElementById('onboardExisting').style.display = which==='existing' ? 'block':'none';
+    });
+  });
+}
+
+init();
+</script>
+</body>
+</html>
