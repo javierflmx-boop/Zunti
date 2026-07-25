@@ -30,7 +30,8 @@
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%;}
   body{
-    background: var(--bg);
+    background: radial-gradient(ellipse 1500px 1100px at 50% 38%, #221E19 0%, #14110E 45%, var(--bg) 78%);
+    background-attachment: fixed;
     color: var(--text);
     font-family: var(--fb);
     font-weight: 300;
@@ -48,7 +49,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    background: var(--bg);
+    background: transparent;
   }
   #app.landing-page{ max-width: 100%; }
 
@@ -289,7 +290,7 @@
   .landing-hero{
     position:relative; width:100%; overflow:hidden;
     display:flex; flex-direction:column; align-items:center;
-    text-align:center; padding: 56px 24px 44px; background: var(--bg);
+    text-align:center; padding: 56px 24px 44px; background: transparent;
   }
   .hero-house-band{
     position:relative; width:100%; max-width:1100px;
