@@ -405,15 +405,21 @@ async function route(){
     render();
     return;
   }
-  state.route = parts[0] || 'dashboard';
   await loadPrivate();
+  if(!state.profile){
+    state.route = 'complete-profile';
+    render();
+    return;
+  }
+  state.route = parts[0] || 'dashboard';
   render();
 }
 
 async function loadPrivate(){
   if(!state.currentUser) return;
-  const { data: profile } = await db.from('profiles').select('*').eq('id', state.currentUser.id).single();
+  const { data: profile } = await db.from('profiles').select('*').eq('id', state.currentUser.id).maybeSingle();
   state.profile = profile;
+  if(!profile) return;
   const { data: properties } = await db.from('properties').select('*').eq('profile_id', state.currentUser.id).order('created_at', { ascending: false });
   state.properties = properties || [];
   const { data: leads } = await db.from('leads').select('*').eq('profile_id', state.currentUser.id).order('down_payment', { ascending: false });
@@ -460,6 +466,19 @@ async function createProfile(businessName, phone, email, password){
   if(profErr){ showToast(profErr.message); return; }
 
   state.currentUser = data.user;
+  location.hash = '#/dashboard';
+  await route();
+}
+
+async function completeProfile(businessName, phone){
+  let slug = slugify(businessName);
+  const { data: existing } = await db.from('profiles').select('slug').eq('slug', slug).maybeSingle();
+  if(existing) slug = slug + Math.floor(Math.random()*90+10);
+
+  const { error } = await db.from('profiles').insert({
+    id: state.currentUser.id, slug, business_name: businessName, phone, email: state.currentUser.email
+  });
+  if(error){ showToast(error.message); return; }
   location.hash = '#/dashboard';
   await route();
 }
@@ -991,6 +1010,13 @@ function previewPublic(){
   location.hash = '#/p/' + state.profile.slug;
 }
 
+function handleCompleteProfile(){
+  const name = document.getElementById('cpName').value.trim();
+  const phone = document.getElementById('cpPhone').value.trim();
+  if(!name){ showToast('Enter a business name'); return; }
+  completeProfile(name, phone);
+}
+
 function handleCreate(){
   const name = document.getElementById('obName').value.trim();
   const phone = document.getElementById('obPhone').value.trim();
@@ -1015,6 +1041,25 @@ function render(){
   if(state.route === 'onboard'){
     app.className = 'landing-page';
     app.innerHTML = viewLanding();
+    return;
+  }
+
+  if(state.route === 'complete-profile'){
+    app.className = '';
+    app.innerHTML = `
+      <div class="topbar">
+        <div class="brand"><span class="dot"></span>Zunti</div>
+        <button class="nav-btn-outline" style="padding:6px 12px;" onclick="logout()">Log out</button>
+      </div>
+      <main>
+        <div class="eyebrow">One more step</div>
+        <h1 style="margin-bottom:8px;">Finish your profile</h1>
+        <p class="muted" style="margin-bottom:24px;">You're signed in as ${escapeHtml(state.currentUser.email)}. Just need a business name to finish setting up your link.</p>
+        <div class="field"><label>Business or your name</label><input id="cpName" placeholder="e.g. Anish Properties"/></div>
+        <div class="field"><label>Phone number</label><input id="cpPhone" placeholder="(407) 555-0100"/></div>
+        <button class="btn btn-primary" onclick="handleCompleteProfile()">Finish setup</button>
+      </main>
+    `;
     return;
   }
 
