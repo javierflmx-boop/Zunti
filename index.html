@@ -46,6 +46,7 @@
     flex-direction: column;
     background: var(--bg);
   }
+  #app.landing-page{ max-width: 100%; }
 
   /* ---------- Public page uses light theme ---------- */
   .public-theme{
@@ -251,7 +252,7 @@
   /* ---------- Landing page (Maeso-style) ---------- */
   .landing-topbar{
     display:flex; align-items:center; justify-content:space-between;
-    padding: 18px 20px; border-bottom:1px solid var(--line);
+    padding: 18px 24px; border-bottom:1px solid var(--line);
     position:sticky; top:0; z-index:20; background:var(--bg);
     gap:10px;
   }
@@ -259,20 +260,20 @@
     font-family:'Outfit'; font-weight:400; font-size:15px; letter-spacing:0.35em;
     color:var(--text); text-transform:uppercase;
   }
-  .landing-nav{ display:flex; align-items:center; gap:8px; }
+  .landing-nav{ display:flex; align-items:center; gap:10px; }
   .nav-btn-outline{
     border:1px solid var(--line); background:transparent; color:var(--text-dim);
     font-family:'Outfit'; font-size:10px; letter-spacing:0.1em; text-transform:uppercase;
-    padding:10px 14px; cursor:pointer; line-height:1.3; white-space:nowrap;
+    padding:12px 18px; cursor:pointer; line-height:1.3; white-space:nowrap;
   }
   .nav-btn-solid{
     border:none; background:var(--cream); color:#0F0E0C;
     font-family:'Outfit'; font-weight:500; font-size:10px; letter-spacing:0.1em; text-transform:uppercase;
-    padding:10px 16px; cursor:pointer; white-space:nowrap;
+    padding:12px 20px; cursor:pointer; white-space:nowrap;
   }
 
   .landing-hero{
-    position:relative; height:62vh; min-height:420px; overflow:hidden;
+    position:relative; width:100%; height:68vh; min-height:460px; max-height:720px; overflow:hidden;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     text-align:center; padding: 0 20px;
   }
@@ -280,28 +281,36 @@
   .landing-hero-bg svg{ width:100%; height:100%; }
   .landing-hero-vignette{
     position:absolute; inset:0; z-index:1;
-    background: radial-gradient(ellipse at 50% 40%, rgba(15,14,12,0.2), rgba(15,14,12,0.88) 75%),
+    background: radial-gradient(ellipse at 50% 40%, rgba(15,14,12,0.15), rgba(15,14,12,0.9) 78%),
                 linear-gradient(180deg, rgba(15,14,12,0.5), rgba(15,14,12,0.95));
   }
   .landing-wordmark{
     position:relative; z-index:2;
-    font-family:'Cormorant Garamond', serif; font-weight:500;
-    font-size: clamp(52px, 16vw, 92px); letter-spacing:0.04em; color:var(--cream); line-height:1;
+    font-family:'Outfit', sans-serif; font-weight:300; text-transform:uppercase;
+    font-size: clamp(76px, 22vw, 160px); letter-spacing:0.09em; color:var(--cream); line-height:1;
+    text-shadow: 0 0 40px rgba(247,241,232,0.35), 0 0 90px rgba(255,106,31,0.2);
   }
   .landing-tagline{
-    position:relative; z-index:2; margin-top:18px;
-    font-family:'Outfit'; font-size:11.5px; letter-spacing:0.32em; text-transform:uppercase; color:var(--text-dim);
+    position:relative; z-index:2; margin-top:22px;
+    font-family:'Outfit'; font-size:clamp(11px,1.1vw,13px); letter-spacing:0.32em; text-transform:uppercase; color:var(--text-dim);
   }
 
   .tile-grid{
     display:grid; grid-template-columns:repeat(3,1fr);
     border-top:1px solid var(--line); border-left:1px solid var(--line);
+    max-width: 1400px; margin: 0 auto;
   }
   .tile{
     border-right:1px solid var(--line); border-bottom:1px solid var(--line);
-    padding: 30px 8px; text-align:center;
-    display:flex; flex-direction:column; align-items:center; gap:14px;
+    padding: 34px 12px; text-align:center;
+    display:flex; flex-direction:column; align-items:center; gap:16px;
     cursor:pointer; background:transparent; transition: background .15s ease;
+  }
+  @media (min-width: 760px){
+    .tile-grid{ grid-template-columns:repeat(6,1fr); }
+    .tile{ padding: 46px 12px; }
+    .tile svg{ width:30px; height:30px; }
+    .landing-hero{ padding: 0 40px; }
   }
   .tile:active{ background: var(--bg-elevated); }
   .tile svg{ width:26px; height:26px; color:var(--orange); opacity:0.9; }
@@ -934,6 +943,7 @@ function render(){
   closeModal();
 
   if(state.route === 'onboard'){
+    app.className = 'landing-page';
     app.innerHTML = viewLanding();
     return;
   }
