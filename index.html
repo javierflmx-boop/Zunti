@@ -555,7 +555,11 @@ async function uploadPropertyPhotos(propId, files){
     const blob = await compressImage(files[i], 1024, 0.7);
     const path = `${state.currentUser.id}/${propId}/${i+1}.jpg`;
     const { error } = await db.storage.from('property-photos').upload(path, blob, { upsert:true, contentType:'image/jpeg' });
-    if(error){ console.error(error); continue; }
+    if(error){
+      console.error('Photo upload failed:', error);
+      showToast('Photo upload failed: ' + error.message);
+      continue;
+    }
     const { data } = db.storage.from('property-photos').getPublicUrl(path);
     urls.push(data.publicUrl);
   }
@@ -893,7 +897,7 @@ function viewLeads(){
     <div class="lead-row" style="align-items:flex-start; cursor:pointer;" onclick="openLeadDetail('${l.id}')">
       <div class="lead-info">
         <div class="lead-name">${escapeHtml(l.name)}</div>
-        <div class="lead-meta">${escapeHtml(l.phone||'')} · budget ${fmtMoney(l.budget)}/mo · ${timeAgo(l.created_at)}</div>
+        <div class="lead-meta">${escapeHtml(l.phone||'')} · ${timeAgo(l.created_at)}</div>
         ${l.status && l.status!=='new' ? `<span class="badge badge-orange" style="margin-top:6px;">${l.status}</span>` : ''}
       </div>
       <div class="lead-amount">
@@ -977,7 +981,7 @@ function viewShare(){
   </div>
   <div class="card" style="margin-top:8px;">
     <h2>How it works</h2>
-    <p class="muted" style="margin-top:8px;">1. You post the link with your listing.<br>2. They tap in, see the property, and fill out down payment + budget.<br>3. You check the Leads tab to see who's ready to move forward.<br>4. Only schedule showings once you've confirmed the fit.</p>
+    <p class="muted" style="margin-top:8px;">1. You post the link with your listing.<br>2. They tap in, see the property, and fill out their deposit info.<br>3. You check the Leads tab to see who's ready to move forward.<br>4. Only schedule showings once you've confirmed the fit.</p>
   </div>
   <button class="btn btn-ghost" style="margin-top:16px;" onclick="previewPublic()">Preview what visitors see →</button>
   `;
@@ -1048,7 +1052,7 @@ function openHowItWorksModal(){
     <div class="card" style="margin-bottom:16px;">
       <p class="muted" style="line-height:1.9;">
         1. You post your one link with a listing.<br>
-        2. Interested renters tap in, see the property, and fill out their name, phone, down payment, and budget.<br>
+        2. Interested renters tap in, see the property, and fill out their name, phone, and deposit.<br>
         3. You check the Leads tab to see who's ready to move forward.<br>
         4. You only schedule showings once you've confirmed the fit.
       </p>
@@ -1146,6 +1150,7 @@ async function submitAddProperty(){
 
 function openInterestModal(propId){
   const prop = state.publicProperties.find(p=>p.id===propId);
+  const hasRequirement = prop && prop.down_payment_required;
   const overlay = document.createElement('div');
   overlay.className='modal-overlay';
   overlay.id='modalOverlay';
@@ -1158,12 +1163,37 @@ function openInterestModal(propId){
     <div class="field"><label>Email</label><input id="liEmail" type="email" placeholder="you@email.com"/></div>
     <div class="field"><label>How many people will be living here?</label><input id="liHousehold" type="number" placeholder="3"/></div>
     <div class="field"><label>When are you available to move?</label><input id="liDate" type="date" min="${new Date().toISOString().split('T')[0]}"/></div>
-    <div class="field"><label>How much down payment do you have available?</label><input id="liDown" type="number" placeholder="10000"/></div>
-    <div class="field"><label>Monthly budget</label><input id="liBudget" type="number" placeholder="1800"/></div>
+    <div class="field">
+      <label>Deposit</label>
+      ${hasRequirement ? `
+      <div class="segmented" id="depositSeg">
+        <button type="button" class="seg-btn active" data-seg="amount">Enter amount</button>
+        <button type="button" class="seg-btn" data-seg="meets">I have the ${fmtMoney(prop.down_payment_required)} deposit</button>
+      </div>` : ''}
+      <input id="liDown" type="number" placeholder="10000"/>
+    </div>
     <button class="btn btn-primary" onclick="submitInterest('${propId}')">Submit</button>
   </div>`;
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
   document.body.appendChild(overlay);
+
+  if(hasRequirement){
+    const seg = document.getElementById('depositSeg');
+    const input = document.getElementById('liDown');
+    seg.querySelectorAll('.seg-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        seg.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        if(btn.dataset.seg === 'meets'){
+          input.value = prop.down_payment_required;
+          input.disabled = true;
+        } else {
+          input.value = '';
+          input.disabled = false;
+        }
+      });
+    });
+  }
 }
 
 async function submitInterest(propId){
@@ -1172,11 +1202,10 @@ async function submitInterest(propId){
   const email = document.getElementById('liEmail').value.trim();
   const householdSize = document.getElementById('liHousehold').value;
   const downPayment = document.getElementById('liDown').value;
-  const budget = document.getElementById('liBudget').value;
   const moveDate = document.getElementById('liDate').value.trim();
-  if(!name || !phone || downPayment===''){ showToast('Name, phone, and down payment are required'); return; }
+  if(!name || !phone || downPayment===''){ showToast('Name, phone, and deposit are required'); return; }
   const prop = state.publicProperties.find(p=>p.id===propId);
-  const ok = await submitLead(state.publicProfile.id, { name, phone, email, householdSize, downPayment, budget, moveDate, propertyTitle: prop ? prop.title : '' });
+  const ok = await submitLead(state.publicProfile.id, { name, phone, email, householdSize, downPayment, moveDate, propertyTitle: prop ? prop.title : '' });
   if(!ok) return;
   closeModal();
   showConfirmModal();
@@ -1210,7 +1239,6 @@ function openLeadDetail(id){
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Phone</span><span>${escapeHtml(l.phone||'-')}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Email</span><span>${escapeHtml(l.email||'-')}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Down payment</span><span class="mono" style="color:var(--gold); font-weight:700;">${fmtMoney(l.down_payment)}</span></div>
-      <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Monthly budget</span><span>${fmtMoney(l.budget)}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Household size</span><span>${escapeHtml(l.household_size||'-')}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Move-in</span><span>${escapeHtml(l.move_date||'-')}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Submitted</span><span>${timeAgo(l.created_at)}</span></div>
