@@ -872,8 +872,8 @@ function viewProperties(){
             <div class="muted">${escapeHtml(p.address||'')}</div>
           </div>
           <div style="display:flex; gap:6px; flex-shrink:0;">
-            <button onclick='openEditPropertyModal(${JSON.stringify(p.id)})' style="background:var(--bg-elevated);border:1px solid var(--line-h);border-radius:0;padding:8px;color:var(--text);cursor:pointer;display:flex;">${ICONS.edit.replace('width="24"','width="16"').replace('height="24"','height="16"')}</button>
-            <button onclick="deleteProperty('${p.id}')" style="background:var(--bg-elevated);border:1px solid var(--line-h);border-radius:0;padding:8px;color:var(--text);cursor:pointer;display:flex;">${ICONS.x.replace('width="24"','width="16"').replace('height="24"','height="16"')}</button>
+            <button onclick='openEditPropertyModal(${JSON.stringify(p.id)})' style="background:var(--cream);border:1px solid var(--cream);border-radius:0;padding:8px;color:var(--bg);cursor:pointer;display:flex;">${ICONS.edit.replace('width="24"','width="16"').replace('height="24"','height="16"')}</button>
+            <button onclick="deleteProperty('${p.id}')" style="background:var(--cream);border:1px solid var(--cream);border-radius:0;padding:8px;color:#B23A2E;cursor:pointer;display:flex;">${ICONS.x.replace('width="24"','width="16"').replace('height="24"','height="16"')}</button>
           </div>
         </div>
         <div style="display:flex; align-items:center; gap:14px; margin-top:10px; flex-wrap:wrap;">
