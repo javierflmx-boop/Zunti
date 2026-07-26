@@ -998,12 +998,17 @@ function viewPublic(){
   <div class="hero-public" style="padding-top:26px;">
     <div class="avatar-circle display">${initials}</div>
     <h1>${escapeHtml(prof.business_name)}</h1>
-    <p class="muted">Available properties — tap one to express interest</p>
+    <p class="muted">View the photos, then tap "I'm interested" on any property that's a fit.</p>
   </div>
   ${state.publicProperties.length===0 ? `<div class="empty p-dim">No properties listed right now.</div>` :
-   state.publicProperties.map(p=>`
-    <div class="public-prop-card" onclick="openInterestModal('${p.id}')">
-      <div class="public-prop-img" ${p.photo_urls && p.photo_urls[0] ? `style="background-image:url('${escapeHtml(p.photo_urls[0])}'); background-size:cover; background-position:center;"` : ''}>${p.photo_urls && p.photo_urls[0] ? '' : 'No photo yet'}</div>
+   state.publicProperties.map(p=>{
+     const photos = (p.photo_urls || []).filter(Boolean);
+     return `
+    <div class="public-prop-card">
+      ${photos.length > 0 ? `
+      <div style="display:flex; height:150px;">
+        ${photos.map(url=>`<div style="flex:1; background-image:url('${escapeHtml(url)}'); background-size:cover; background-position:center;"></div>`).join('')}
+      </div>` : `<div class="public-prop-img">No photo yet</div>`}
       <div class="prop-body">
         <h2>${escapeHtml(p.title)}</h2>
         <div class="muted">${escapeHtml(p.address||'')}</div>
@@ -1012,10 +1017,11 @@ function viewPublic(){
             <div class="prop-price">${fmtMoney(p.price)}/mo</div>
             ${p.down_payment_required ? `<div class="muted" style="font-size:12px; margin-top:2px;">${fmtMoney(p.down_payment_required)} down required</div>` : (p.deposit_required ? `<div class="muted" style="font-size:12px; margin-top:2px;">Deposit required</div>` : '')}
           </div>
-          <span style="color:var(--orange); font-weight:700; font-size:13px; display:flex; align-items:center; gap:4px;">I'm interested ${ICONS.chevRight.replace('currentColor','#FF6B00')}</span>
+          <span onclick="openInterestModal('${p.id}')" style="color:var(--orange); font-weight:700; font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; padding:8px 4px;">I'm interested ${ICONS.chevRight.replace('currentColor','#FF6B00')}</span>
         </div>
       </div>
-    </div>`).join('')}
+    </div>`;
+   }).join('')}
   `;
 }
 
