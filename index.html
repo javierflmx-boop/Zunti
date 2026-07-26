@@ -575,10 +575,11 @@ async function addProperty(data, files){
     down_payment_required: data.downPaymentRequired,
     photo_urls: photoUrls
   });
-  if(error){ showToast(error.message); return; }
+  if(error){ console.error('addProperty error:', error); showToast(error.message); return false; }
   await loadPrivate();
   render();
   showToast('Property added');
+  return true;
 }
 
 async function deleteProperty(id){
@@ -599,10 +600,11 @@ async function updateProperty(id, data, files){
     updates.photo_urls = await uploadPropertyPhotos(id, files);
   }
   const { error } = await db.from('properties').update(updates).eq('id', id);
-  if(error){ showToast(error.message); return; }
+  if(error){ console.error('updateProperty error:', error); showToast(error.message); return false; }
   await loadPrivate();
   render();
   showToast('Property updated');
+  return true;
 }
 
 async function submitLead(profileId, data){
@@ -623,13 +625,14 @@ async function updateLeadStatus(id, status){
 
 let toastTimer;
 function showToast(msg){
+  console.log('[Zunti]', msg);
   let t = document.getElementById('toast');
   if(t) t.remove();
   t = document.createElement('div');
   t.id='toast'; t.className='toast'; t.textContent=msg;
   document.body.appendChild(t);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>t.remove(), 2200);
+  toastTimer = setTimeout(()=>t.remove(), 5000);
 }
 
 function copyLink(){
@@ -1127,13 +1130,18 @@ async function submitAddProperty(){
   const f2 = document.getElementById('mpPhoto2').files[0];
   const btn = document.getElementById('mpSubmitBtn');
   btn.disabled = true; btn.textContent = editingPropertyId ? 'Saving…' : 'Adding…';
+  let ok;
   if(editingPropertyId){
-    await updateProperty(editingPropertyId, {title, address, price, beds, downPaymentRequired}, [f1, f2]);
+    ok = await updateProperty(editingPropertyId, {title, address, price, beds, downPaymentRequired}, [f1, f2]);
   } else {
-    await addProperty({title, address, price, beds, downPaymentRequired}, [f1, f2]);
+    ok = await addProperty({title, address, price, beds, downPaymentRequired}, [f1, f2]);
   }
-  editingPropertyId = null;
-  closeModal();
+  if(ok){
+    editingPropertyId = null;
+    closeModal();
+  } else {
+    btn.disabled = false; btn.textContent = editingPropertyId ? 'Save changes' : 'Add property';
+  }
 }
 
 function openInterestModal(propId){
