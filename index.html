@@ -435,6 +435,10 @@ async function loadPublic(slug){
   if(profile){
     const { data: properties } = await db.from('properties').select('*').eq('profile_id', profile.id).order('created_at', { ascending: false });
     state.publicProperties = properties || [];
+    const isOwnerPreview = state.currentUser && state.currentUser.id === profile.id;
+    if(!isOwnerPreview){
+      state.publicProperties.forEach(p => db.rpc('increment_property_views', { prop_id: p.id }).then(()=>{}));
+    }
   } else {
     state.publicProperties = [];
   }
@@ -657,6 +661,7 @@ const ICONS = {
   rank: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>`,
   phone: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
   key: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6M15.5 7.5l3 3M18.5 4.5l3 3"/></svg>`,
+  eye: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>`,
 };
 
 // ---------------- Views ----------------
@@ -851,6 +856,7 @@ function viewProperties(){
           <div class="prop-price">${fmtMoney(p.price)}/mo</div>
           <div class="muted" style="display:flex; align-items:center; gap:5px;">${ICONS.bed.replace('width="24"','width="15"').replace('height="24"','height="15"')} ${escapeHtml(p.beds||'-')} bed</div>
           ${p.down_payment_required ? `<span class="badge badge-orange">${fmtMoney(p.down_payment_required)} down</span>` : ''}
+          <div class="muted" style="display:flex; align-items:center; gap:5px; font-size:12px;">${ICONS.eye.replace('width="24"','width="14"').replace('height="24"','height="14"')} ${p.views || 0} view${p.views===1?'':'s'}</div>
         </div>
       </div>
     </div>`).join('')}
