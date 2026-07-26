@@ -444,7 +444,7 @@ async function loadPrivate(){
   if(!profile) return;
   const { data: properties } = await db.from('properties').select('*').eq('profile_id', state.currentUser.id).order('created_at', { ascending: false });
   state.properties = properties || [];
-  const { data: leads } = await db.from('leads').select('*').eq('profile_id', state.currentUser.id).order('down_payment', { ascending: false });
+  const { data: leads } = await db.from('leads').select('*').eq('profile_id', state.currentUser.id).order('created_at', { ascending: false });
   state.leads = leads || [];
 }
 
@@ -816,11 +816,11 @@ function viewDashboard(){
   </div>
 
   <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-    <h2>Top leads</h2>
+    <h2>Recent leads</h2>
     <a href="#/leads" style="color:var(--orange); font-size:13px; font-weight:700; text-decoration:none;">See all</a>
   </div>
   ${topLeads.length === 0 ? emptyState('No leads yet', 'Share your link to start collecting qualified renters.') :
-    topLeads.map((l,i)=>leadRow(l,i)).join('')}
+    topLeads.map((l)=>leadRow(l)).join('')}
 
   <div style="margin-top:22px;">
     <button class="btn btn-primary" onclick="location.hash='#/share'">${ICONS.share} Share my link</button>
@@ -828,18 +828,16 @@ function viewDashboard(){
   `;
 }
 
-function leadRow(l, i){
-  const badgeClass = i===0 ? 'gold' : '';
+function leadRow(l){
   return `
   <div class="lead-row">
-    <div class="rank-badge ${badgeClass}">${i+1}</div>
     <div class="lead-info">
       <div class="lead-name">${escapeHtml(l.name)}</div>
       <div class="lead-meta">${escapeHtml(l.phone||'')} · ${timeAgo(l.created_at)}</div>
     </div>
     <div class="lead-amount">
       <div class="num">${fmtMoney(l.down_payment)}</div>
-      <div class="lbl">down</div>
+      <div class="lbl">down payment</div>
     </div>
   </div>`;
 }
@@ -885,12 +883,11 @@ function viewProperties(){
 
 function viewLeads(){
   return `
-  <div class="eyebrow">Ranked by down payment</div>
+  <div class="eyebrow">Your leads</div>
   <h1 style="margin-bottom:18px;">Leads</h1>
   ${state.leads.length===0 ? emptyState('No leads yet','Share your link to start collecting qualified renters.') :
-    state.leads.map((l,i)=>`
+    state.leads.map((l)=>`
     <div class="lead-row" style="align-items:flex-start; cursor:pointer;" onclick="openLeadDetail('${l.id}')">
-      <div class="rank-badge ${i===0?'gold':''}">${i+1}</div>
       <div class="lead-info">
         <div class="lead-name">${escapeHtml(l.name)}</div>
         <div class="lead-meta">${escapeHtml(l.phone||'')} · budget ${fmtMoney(l.budget)}/mo · ${timeAgo(l.created_at)}</div>
@@ -898,7 +895,7 @@ function viewLeads(){
       </div>
       <div class="lead-amount">
         <div class="num">${fmtMoney(l.down_payment)}</div>
-        <div class="lbl">down</div>
+        <div class="lbl">down payment</div>
       </div>
     </div>`).join('')}
   `;
@@ -977,7 +974,7 @@ function viewShare(){
   </div>
   <div class="card" style="margin-top:8px;">
     <h2>How it works</h2>
-    <p class="muted" style="margin-top:8px;">1. You post the link with your listing.<br>2. They tap in, see the property, and fill out down payment + budget.<br>3. You check the Leads tab — sorted highest down payment first.<br>4. Only schedule showings with renters who meet your requirements.</p>
+    <p class="muted" style="margin-top:8px;">1. You post the link with your listing.<br>2. They tap in, see the property, and fill out down payment + budget.<br>3. You check the Leads tab to see who's ready to move forward.<br>4. Only schedule showings once you've confirmed the fit.</p>
   </div>
   <button class="btn btn-ghost" style="margin-top:16px;" onclick="previewPublic()">Preview what visitors see →</button>
   `;
@@ -1049,8 +1046,8 @@ function openHowItWorksModal(){
       <p class="muted" style="line-height:1.9;">
         1. You post your one link with a listing.<br>
         2. Interested renters tap in, see the property, and fill out their name, phone, down payment, and budget.<br>
-        3. You check the Leads tab — sorted by highest down payment first.<br>
-        4. You only schedule showings with renters who meet your requirements.
+        3. You check the Leads tab to see who's ready to move forward.<br>
+        4. You only schedule showings once you've confirmed the fit.
       </p>
     </div>
     <button class="btn btn-primary" onclick="closeModal(); openJoinModal();">Get started</button>
