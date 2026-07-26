@@ -862,9 +862,14 @@ function viewProperties(){
   <div class="eyebrow">Your listings</div>
   <h1 style="margin-bottom:18px;">Properties</h1>
   ${state.properties.length===0 ? emptyState('No properties yet','Add your first one so people can express interest.') :
-    state.properties.map(p=>`
+    state.properties.map(p=>{
+      const photos = (p.photo_urls || []).filter(Boolean);
+      return `
     <div class="prop-card">
-      <div class="prop-img" ${p.photo_urls && p.photo_urls[0] ? `style="background-image:url('${escapeHtml(p.photo_urls[0])}'); background-size:cover; background-position:center;"` : ''}>${p.photo_urls && p.photo_urls[0] ? '' : 'No photo yet'}</div>
+      ${photos.length > 0 ? `
+      <div style="display:flex; height:120px;">
+        ${photos.map(url=>`<div style="flex:1; background-image:url('${escapeHtml(url)}'); background-size:cover; background-position:center;"></div>`).join('')}
+      </div>` : `<div class="prop-img">No photo yet</div>`}
       <div class="prop-body">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
           <div style="flex:1; min-width:140px;">
@@ -883,7 +888,8 @@ function viewProperties(){
           <div style="display:flex; align-items:center; gap:3px; font-size:10px; color:var(--text-faint);">${ICONS.eye.replace('width="24"','width="11"').replace('height="24"','height="11"')} ${p.views || 0}</div>
         </div>
       </div>
-    </div>`).join('')}
+    </div>`;
+    }).join('')}
   <button class="fab" onclick="openAddPropertyModal()">${ICONS.plus.replace('currentColor','#14120F')}</button>
   `;
 }
