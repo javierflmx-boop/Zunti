@@ -866,14 +866,14 @@ function viewProperties(){
     <div class="prop-card">
       <div class="prop-img" ${p.photo_urls && p.photo_urls[0] ? `style="background-image:url('${escapeHtml(p.photo_urls[0])}'); background-size:cover; background-position:center;"` : ''}>${p.photo_urls && p.photo_urls[0] ? '' : 'No photo yet'}</div>
       <div class="prop-body">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-          <div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+          <div style="flex:1; min-width:140px;">
             <h2>${escapeHtml(p.title)}</h2>
             <div class="muted">${escapeHtml(p.address||'')}</div>
           </div>
           <div style="display:flex; gap:6px; flex-shrink:0;">
-            <button onclick='openEditPropertyModal(${JSON.stringify(p.id)})' style="background:var(--cream);border:1px solid var(--cream);border-radius:0;padding:8px;color:var(--bg);cursor:pointer;display:flex;">${ICONS.edit.replace('width="24"','width="16"').replace('height="24"','height="16"')}</button>
-            <button onclick="deleteProperty('${p.id}')" style="background:var(--cream);border:1px solid var(--cream);border-radius:0;padding:8px;color:#B23A2E;cursor:pointer;display:flex;">${ICONS.x.replace('width="24"','width="16"').replace('height="24"','height="16"')}</button>
+            <button onclick='openEditPropertyModal(${JSON.stringify(p.id)})' style="background:var(--cream);border:1px solid var(--cream);border-radius:0;padding:8px 12px;color:var(--bg);cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">${ICONS.edit.replace('width="24"','width="14"').replace('height="24"','height="14"')} Edit</button>
+            <button onclick="deleteProperty('${p.id}')" style="background:var(--cream);border:1px solid var(--cream);border-radius:0;padding:8px 12px;color:#B23A2E;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">${ICONS.x.replace('width="24"','width="14"').replace('height="24"','height="14"')} Delete</button>
           </div>
         </div>
         <div style="display:flex; align-items:center; gap:14px; margin-top:10px; flex-wrap:wrap;">
