@@ -576,7 +576,7 @@ async function addProperty(data, files){
   const { error } = await db.from('properties').insert({
     id: propId, profile_id: state.currentUser.id,
     title: data.title, address: data.address, price: data.price, beds: data.beds,
-    down_payment_required: data.downPaymentRequired,
+    down_payment_required: data.downPaymentRequired, deposit_required: data.depositRequired || false,
     photo_urls: photoUrls
   });
   if(error){ console.error('addProperty error:', error); showToast(error.message); return false; }
@@ -597,7 +597,7 @@ async function deleteProperty(id){
 async function updateProperty(id, data, files){
   const updates = {
     title: data.title, address: data.address, price: data.price,
-    beds: data.beds, down_payment_required: data.downPaymentRequired
+    beds: data.beds, down_payment_required: data.downPaymentRequired, deposit_required: data.depositRequired || false
   };
   if(files && files.some(f=>f)){
     showToast('Uploading photos…');
@@ -879,7 +879,7 @@ function viewProperties(){
         <div style="display:flex; align-items:center; gap:14px; margin-top:10px; flex-wrap:wrap;">
           <div class="prop-price">${fmtMoney(p.price)}/mo</div>
           <div class="muted" style="display:flex; align-items:center; gap:5px;">${ICONS.bed.replace('width="24"','width="15"').replace('height="24"','height="15"')} ${escapeHtml(p.beds||'-')} bed</div>
-          ${p.down_payment_required ? `<span class="badge badge-orange">${fmtMoney(p.down_payment_required)} down</span>` : ''}
+          ${p.down_payment_required ? `<span class="badge badge-orange">${fmtMoney(p.down_payment_required)} down</span>` : (p.deposit_required ? `<span class="badge badge-orange">Deposit required</span>` : '')}
           <div style="display:flex; align-items:center; gap:3px; font-size:10px; color:var(--text-faint);">${ICONS.eye.replace('width="24"','width="11"').replace('height="24"','height="11"')} ${p.views || 0}</div>
         </div>
       </div>
@@ -1010,7 +1010,7 @@ function viewPublic(){
         <div style="display:flex; align-items:center; justify-content:space-between; margin-top:10px;">
           <div>
             <div class="prop-price">${fmtMoney(p.price)}/mo</div>
-            ${p.down_payment_required ? `<div class="muted" style="font-size:12px; margin-top:2px;">${fmtMoney(p.down_payment_required)} down required</div>` : ''}
+            ${p.down_payment_required ? `<div class="muted" style="font-size:12px; margin-top:2px;">${fmtMoney(p.down_payment_required)} down required</div>` : (p.deposit_required ? `<div class="muted" style="font-size:12px; margin-top:2px;">Deposit required</div>` : '')}
           </div>
           <span style="color:var(--orange); font-weight:700; font-size:13px; display:flex; align-items:center; gap:4px;">I'm interested ${ICONS.chevRight.replace('currentColor','#FF6B00')}</span>
         </div>
@@ -1081,13 +1081,21 @@ function openLoginModal(){
 let editingPropertyId = null;
 
 function propertyModalHtml(p){
+  const showAmount = !p || p.down_payment_required;
   return `
   <div class="modal">
     <div class="modal-header"><h2>${p ? 'Edit property' : 'Add a property'}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="field"><label>Title</label><input id="mpTitle" placeholder="e.g. 3/2 house near Lake Nona" value="${p ? escapeHtml(p.title) : ''}"/></div>
     <div class="field"><label>Address</label><input id="mpAddress" placeholder="Street, city" value="${p ? escapeHtml(p.address||'') : ''}"/></div>
     <div class="field"><label>Monthly rent</label><input id="mpPrice" type="number" placeholder="1800" value="${p && p.price ? p.price : ''}"/></div>
-    <div class="field"><label>Down payment required</label><input id="mpDown" type="number" placeholder="3000" value="${p && p.down_payment_required ? p.down_payment_required : ''}"/></div>
+    <div class="field">
+      <label>Down payment</label>
+      <div class="segmented" id="downSeg">
+        <button type="button" class="seg-btn ${showAmount ? 'active' : ''}" data-seg="amount">Enter amount</button>
+        <button type="button" class="seg-btn ${!showAmount ? 'active' : ''}" data-seg="flag">Deposit required</button>
+      </div>
+      <input id="mpDown" type="number" placeholder="3000" value="${p && p.down_payment_required ? p.down_payment_required : ''}" style="display:${showAmount ? 'block' : 'none'};"/>
+    </div>
     <div class="field"><label>Bedrooms</label><input id="mpBeds" type="number" placeholder="3" value="${p && p.beds ? p.beds : ''}"/></div>
     <div class="field">
       <label>Outside photo${p ? ' (leave blank to keep current)' : ''}</label>
@@ -1101,6 +1109,23 @@ function propertyModalHtml(p){
   </div>`;
 }
 
+function bindDownPaymentToggle(){
+  const seg = document.getElementById('downSeg');
+  const input = document.getElementById('mpDown');
+  seg.querySelectorAll('.seg-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      if(btn.dataset.seg === 'amount'){
+        input.style.display = 'block';
+      } else {
+        input.style.display = 'none';
+        input.value = '';
+      }
+    });
+  });
+}
+
 function openAddPropertyModal(){
   editingPropertyId = null;
   const overlay = document.createElement('div');
@@ -1109,6 +1134,7 @@ function openAddPropertyModal(){
   overlay.innerHTML = propertyModalHtml(null);
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
   document.body.appendChild(overlay);
+  bindDownPaymentToggle();
 }
 
 function openEditPropertyModal(id){
@@ -1121,24 +1147,27 @@ function openEditPropertyModal(id){
   overlay.innerHTML = propertyModalHtml(p);
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
   document.body.appendChild(overlay);
+  bindDownPaymentToggle();
 }
 
 async function submitAddProperty(){
   const title = document.getElementById('mpTitle').value.trim();
   const address = document.getElementById('mpAddress').value.trim();
   const price = document.getElementById('mpPrice').value;
-  const downPaymentRequired = document.getElementById('mpDown').value;
   const beds = document.getElementById('mpBeds').value;
   if(!title || !price){ showToast('Add a title and rent amount'); return; }
+  const downChoice = document.querySelector('#downSeg .seg-btn.active');
+  const depositFlag = downChoice && downChoice.dataset.seg === 'flag';
+  const downPaymentRequired = depositFlag ? null : document.getElementById('mpDown').value;
   const f1 = document.getElementById('mpPhoto1').files[0];
   const f2 = document.getElementById('mpPhoto2').files[0];
   const btn = document.getElementById('mpSubmitBtn');
   btn.disabled = true; btn.textContent = editingPropertyId ? 'Saving…' : 'Adding…';
   let ok;
   if(editingPropertyId){
-    ok = await updateProperty(editingPropertyId, {title, address, price, beds, downPaymentRequired}, [f1, f2]);
+    ok = await updateProperty(editingPropertyId, {title, address, price, beds, downPaymentRequired, depositRequired: depositFlag}, [f1, f2]);
   } else {
-    ok = await addProperty({title, address, price, beds, downPaymentRequired}, [f1, f2]);
+    ok = await addProperty({title, address, price, beds, downPaymentRequired, depositRequired: depositFlag}, [f1, f2]);
   }
   if(ok){
     editingPropertyId = null;
@@ -1150,7 +1179,6 @@ async function submitAddProperty(){
 
 function openInterestModal(propId){
   const prop = state.publicProperties.find(p=>p.id===propId);
-  const hasRequirement = prop && prop.down_payment_required;
   const overlay = document.createElement('div');
   overlay.className='modal-overlay';
   overlay.id='modalOverlay';
@@ -1164,12 +1192,14 @@ function openInterestModal(propId){
     <div class="field"><label>How many people will be living here?</label><input id="liHousehold" type="number" placeholder="3"/></div>
     <div class="field"><label>When are you available to move?</label><input id="liDate" type="date" min="${new Date().toISOString().split('T')[0]}"/></div>
     <div class="field">
-      <label>Deposit</label>
-      ${hasRequirement ? `
+      <label>Do you have a deposit available?</label>
       <div class="segmented" id="depositSeg">
-        <button type="button" class="seg-btn active" data-seg="amount">Enter amount</button>
-        <button type="button" class="seg-btn" data-seg="meets">I have the ${fmtMoney(prop.down_payment_required)} deposit</button>
-      </div>` : ''}
+        <button type="button" class="seg-btn" data-seg="yes">Yes</button>
+        <button type="button" class="seg-btn" data-seg="no">No</button>
+      </div>
+    </div>
+    <div class="field" id="depositAmountField" style="display:none;">
+      <label>How much?</label>
       <input id="liDown" type="number" placeholder="10000"/>
     </div>
     <button class="btn btn-primary" onclick="submitInterest('${propId}')">Submit</button>
@@ -1177,23 +1207,21 @@ function openInterestModal(propId){
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
   document.body.appendChild(overlay);
 
-  if(hasRequirement){
-    const seg = document.getElementById('depositSeg');
-    const input = document.getElementById('liDown');
-    seg.querySelectorAll('.seg-btn').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        seg.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        if(btn.dataset.seg === 'meets'){
-          input.value = prop.down_payment_required;
-          input.disabled = true;
-        } else {
-          input.value = '';
-          input.disabled = false;
-        }
-      });
+  const seg = document.getElementById('depositSeg');
+  const amountField = document.getElementById('depositAmountField');
+  const input = document.getElementById('liDown');
+  seg.querySelectorAll('.seg-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      if(btn.dataset.seg === 'yes'){
+        amountField.style.display = 'block';
+      } else {
+        amountField.style.display = 'none';
+        input.value = '0';
+      }
     });
-  }
+  });
 }
 
 async function submitInterest(propId){
@@ -1201,9 +1229,13 @@ async function submitInterest(propId){
   const phone = document.getElementById('liPhone').value.trim();
   const email = document.getElementById('liEmail').value.trim();
   const householdSize = document.getElementById('liHousehold').value;
-  const downPayment = document.getElementById('liDown').value;
   const moveDate = document.getElementById('liDate').value.trim();
-  if(!name || !phone || downPayment===''){ showToast('Name, phone, and deposit are required'); return; }
+  const depositChoice = document.querySelector('#depositSeg .seg-btn.active');
+  if(!depositChoice){ showToast('Let us know if you have a deposit'); return; }
+  const hasDeposit = depositChoice.dataset.seg === 'yes';
+  const downPayment = hasDeposit ? document.getElementById('liDown').value : '0';
+  if(!name || !phone){ showToast('Name and phone are required'); return; }
+  if(hasDeposit && !downPayment){ showToast('Enter your deposit amount'); return; }
   const prop = state.publicProperties.find(p=>p.id===propId);
   const ok = await submitLead(state.publicProfile.id, { name, phone, email, householdSize, downPayment, moveDate, propertyTitle: prop ? prop.title : '' });
   if(!ok) return;
