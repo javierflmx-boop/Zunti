@@ -776,18 +776,18 @@ function viewOnboard(){
     <div id="onboardNew">
       <div class="field">
         <label>Business or your name</label>
-        <input id="obName" placeholder="e.g. Anish Properties" />
+        <input id="obName" placeholder="e.g. Lumila Holdings" />
       </div>
       <div class="field">
         <label>Phone number</label>
-        <input id="obPhone" placeholder="(407) 555-0100" />
+        <input id="obPhone" placeholder="(555) 555-0100" />
       </div>
       <button class="btn btn-primary" onclick="handleCreate()">Create my link</button>
     </div>
     <div id="onboardExisting" style="display:none;">
       <div class="field">
         <label>Your link ID</label>
-        <input id="obSlug" placeholder="e.g. anish" />
+        <input id="obSlug" placeholder="e.g. lumilaholdings" />
       </div>
       <button class="btn btn-primary" onclick="handleLogin()">Open dashboard</button>
     </div>
@@ -992,7 +992,7 @@ function viewPublic(){
   if(!prof){
     return `<div class="hero-public"><h1>Link not found</h1><p class="muted">This profile doesn't exist yet.</p></div>`;
   }
-  const initials = prof.business_name.slice(0,2).toUpperCase();
+  const initials = (prof.business_name.match(/[A-Za-z]/g) || ['Z']).slice(0,2).join('').toUpperCase();
   return `
   ${houseHero(escapeHtml(prof.business_name))}
   <div class="hero-public" style="padding-top:26px;">
@@ -1038,8 +1038,8 @@ function openJoinModal(){
   overlay.innerHTML = `
   <div class="modal">
     <div class="modal-header"><div><div class="eyebrow">Join free</div><h2>Create your account</h2></div><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <div class="field"><label>Business or your name</label><input id="obName" placeholder="e.g. Anish Properties"/></div>
-    <div class="field"><label>Phone number</label><input id="obPhone" placeholder="(407) 555-0100"/></div>
+    <div class="field"><label>Business or your name</label><input id="obName" placeholder="e.g. Lumila Holdings"/></div>
+    <div class="field"><label>Phone number</label><input id="obPhone" placeholder="(555) 555-0100"/></div>
     <div class="field"><label>Email</label><input id="obEmail" type="email" placeholder="you@email.com"/></div>
     <div class="field"><label>Password</label><input id="obPass" type="password" placeholder="••••••••"/></div>
     <button class="btn btn-primary" onclick="handleCreate()">Create my account</button>
@@ -1193,7 +1193,7 @@ function openInterestModal(propId){
     <div class="modal-header"><div><div class="eyebrow">${escapeHtml(prop.title)}</div><h2>I'm interested</h2></div><button class="modal-close" onclick="closeModal()">✕</button></div>
     <p class="muted" style="margin-bottom:16px;">Takes a minute. We'll only reach out if it's a fit.</p>
     <div class="field"><label>Your name</label><input id="liName" placeholder="Full name"/></div>
-    <div class="field"><label>Phone number</label><input id="liPhone" placeholder="(407) 555-0100"/></div>
+    <div class="field"><label>Phone number</label><input id="liPhone" placeholder="(555) 555-0100"/></div>
     <div class="field"><label>Email</label><input id="liEmail" type="email" placeholder="you@email.com"/></div>
     <div class="field"><label>How many people will be living here?</label><input id="liHousehold" type="number" placeholder="3"/></div>
     <div class="field"><label>When are you available to move?</label><input id="liDate" type="date" min="${new Date().toISOString().split('T')[0]}"/></div>
@@ -1347,8 +1347,8 @@ function render(){
         <div class="eyebrow">One more step</div>
         <h1 style="margin-bottom:8px;">Finish your profile</h1>
         <p class="muted" style="margin-bottom:24px;">You're signed in as ${escapeHtml(state.currentUser.email)}. Just need a business name to finish setting up your link.</p>
-        <div class="field"><label>Business or your name</label><input id="cpName" placeholder="e.g. Anish Properties"/></div>
-        <div class="field"><label>Phone number</label><input id="cpPhone" placeholder="(407) 555-0100"/></div>
+        <div class="field"><label>Business or your name</label><input id="cpName" placeholder="e.g. Lumila Holdings"/></div>
+        <div class="field"><label>Phone number</label><input id="cpPhone" placeholder="(555) 555-0100"/></div>
         <button class="btn btn-primary" onclick="handleCompleteProfile()">Finish setup</button>
       </main>
     `;
