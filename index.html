@@ -368,6 +368,8 @@ let state = {
   publicProperties: [],
   publicProfile: null,
   selectedProperty: null,
+  adminStats: null,
+  adminError: null,
 };
 
 function slugify(s){
@@ -403,6 +405,17 @@ async function route(){
     render();
     return;
   }
+  if(parts[0] === 'admin'){
+    if(!state.currentUser){
+      state.route = 'onboard';
+      render();
+      return;
+    }
+    state.route = 'admin';
+    await loadAdminStats();
+    render();
+    return;
+  }
   if(!state.currentUser){
     state.route = 'onboard';
     render();
@@ -416,6 +429,12 @@ async function route(){
   }
   state.route = parts[0] || 'dashboard';
   render();
+}
+
+async function loadAdminStats(){
+  const { data, error } = await db.rpc('get_admin_stats');
+  state.adminStats = error ? null : data;
+  state.adminError = error ? error.message : null;
 }
 
 async function loadPrivate(){
@@ -711,7 +730,7 @@ function viewLanding(){
   <div class="landing-topbar">
     <div class="landing-logo">Zunti</div>
     <div class="landing-nav">
-      <button class="nav-btn-outline" onclick="document.getElementById('tileGrid').scrollIntoView({behavior:'smooth'})">How it works</button>
+      <button class="nav-btn-outline" onclick="openHowItWorksModal()">How it works</button>
       <button class="nav-btn-outline" onclick="openLoginModal()">Log in</button>
       <button class="nav-btn-solid" onclick="openJoinModal()">Join free</button>
     </div>
@@ -856,7 +875,7 @@ function viewProperties(){
           <div class="prop-price">${fmtMoney(p.price)}/mo</div>
           <div class="muted" style="display:flex; align-items:center; gap:5px;">${ICONS.bed.replace('width="24"','width="15"').replace('height="24"','height="15"')} ${escapeHtml(p.beds||'-')} bed</div>
           ${p.down_payment_required ? `<span class="badge badge-orange">${fmtMoney(p.down_payment_required)} down</span>` : ''}
-          <div class="muted" style="display:flex; align-items:center; gap:5px; font-size:12px;">${ICONS.eye.replace('width="24"','width="14"').replace('height="24"','height="14"')} ${p.views || 0} view${p.views===1?'':'s'}</div>
+          <div style="display:flex; align-items:center; gap:3px; font-size:10px; color:var(--text-faint);">${ICONS.eye.replace('width="24"','width="11"').replace('height="24"','height="11"')} ${p.views || 0}</div>
         </div>
       </div>
     </div>`).join('')}
@@ -880,6 +899,67 @@ function viewLeads(){
       <div class="lead-amount">
         <div class="num">${fmtMoney(l.down_payment)}</div>
         <div class="lbl">down</div>
+      </div>
+    </div>`).join('')}
+  `;
+}
+
+function viewAdmin(){
+  if(state.adminError){
+    return `
+    <div class="eyebrow">Admin</div>
+    <h1 style="margin-bottom:12px;">Not authorized</h1>
+    <p class="muted">This view isn't available for your account.</p>
+    `;
+  }
+  const s = state.adminStats;
+  if(!s) return `<p class="muted">Loading…</p>`;
+
+  const maxDay = Math.max(1, ...(s.signups_by_day||[]).map(d=>d.count));
+
+  return `
+  <div class="eyebrow">Private — visible only to you</div>
+  <h1 style="margin-bottom:18px;">Platform overview</h1>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-num">${s.total_landlords}</div>
+      <div class="stat-lbl">Total landlords</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${s.total_properties}</div>
+      <div class="stat-lbl">Total properties</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${s.total_leads}</div>
+      <div class="stat-lbl">Total leads</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${s.signups_last_7_days}</div>
+      <div class="stat-lbl">Signups, last 7 days</div>
+    </div>
+  </div>
+
+  <h2 style="margin:10px 0 12px;">Signups, last 14 days</h2>
+  <div style="display:flex; align-items:flex-end; gap:4px; height:70px; margin-bottom:26px;">
+    ${(s.signups_by_day||[]).slice().reverse().map(d=>`
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+        <div style="width:100%; background:var(--orange); opacity:0.85; height:${Math.max(4,(d.count/maxDay)*54)}px;"></div>
+        <div style="font-size:8px; color:var(--text-faint);">${d.count}</div>
+      </div>`).join('')}
+  </div>
+
+  <h2 style="margin-bottom:12px;">Landlords</h2>
+  ${(s.landlords||[]).map(l=>`
+    <div class="lead-row" style="align-items:flex-start;">
+      <div class="lead-info">
+        <div class="lead-name">${escapeHtml(l.business_name)}</div>
+        <div class="lead-meta">${escapeHtml(l.email||'-')} · joined ${timeAgo(l.created_at)}</div>
+        <div class="lead-meta">${l.last_sign_in_at ? 'Active ' + timeAgo(l.last_sign_in_at) : 'Never logged in'}</div>
+      </div>
+      <div class="lead-amount">
+        <div class="num" style="font-size:14px;">${l.property_count} listed</div>
+        <div class="lbl">${l.lead_count} leads</div>
       </div>
     </div>`).join('')}
   `;
@@ -953,6 +1033,27 @@ function openJoinModal(){
     <div class="field"><label>Email</label><input id="obEmail" type="email" placeholder="you@email.com"/></div>
     <div class="field"><label>Password</label><input id="obPass" type="password" placeholder="••••••••"/></div>
     <button class="btn btn-primary" onclick="handleCreate()">Create my account</button>
+  </div>`;
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+  document.body.appendChild(overlay);
+}
+
+function openHowItWorksModal(){
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modalOverlay';
+  overlay.innerHTML = `
+  <div class="modal">
+    <div class="modal-header"><h2>How Zunti works</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="card" style="margin-bottom:16px;">
+      <p class="muted" style="line-height:1.9;">
+        1. You post your one link with a listing.<br>
+        2. Interested renters tap in, see the property, and fill out their name, phone, down payment, and budget.<br>
+        3. You check the Leads tab — sorted by highest down payment first.<br>
+        4. You only schedule showings with people who can actually close.
+      </p>
+    </div>
+    <button class="btn btn-primary" onclick="closeModal(); openJoinModal();">Get started</button>
   </div>`;
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
   document.body.appendChild(overlay);
@@ -1204,6 +1305,7 @@ function render(){
   else if(state.route==='properties') content = viewProperties();
   else if(state.route==='leads') content = viewLeads();
   else if(state.route==='share') content = viewShare();
+  else if(state.route==='admin') content = viewAdmin();
   else content = viewDashboard();
 
   app.innerHTML = `
