@@ -301,12 +301,12 @@
   .hero-house svg{ display:block; width:100%; height:auto; }
   .hero-house.h1{ left:2%; width:clamp(80px,10vw,150px); }
   .hero-house.h2{ left:40%; width:clamp(95px,11.5vw,180px); }
-  .hero-house.h3{ left:78%; width:clamp(100px,13vw,200px); }
+  .hero-house.h3{ left:78%; width:clamp(100px,13vw,200px); bottom:-18px; }
   @media (max-width:560px){
     .hero-house-band{ height:clamp(110px,32vw,160px); margin-bottom:18px; }
     .hero-house.h1{ left:-2%; width:clamp(65px,24vw,95px); }
     .hero-house.h2{ left:36%; width:clamp(75px,27vw,115px); }
-    .hero-house.h3{ left:72%; width:clamp(80px,29vw,125px); }
+    .hero-house.h3{ left:72%; width:clamp(80px,29vw,125px); bottom:-13px; }
   }
   .landing-wordmark{
     position:relative; z-index:2;
@@ -559,10 +559,27 @@ async function addProperty(data, files){
 }
 
 async function deleteProperty(id){
+  if(!confirm('Delete this property? This can\'t be undone.')) return;
   await db.storage.from('property-photos').remove([`${state.currentUser.id}/${id}/1.jpg`, `${state.currentUser.id}/${id}/2.jpg`]);
   await db.from('properties').delete().eq('id', id);
   state.properties = state.properties.filter(p=>p.id!==id);
   render();
+}
+
+async function updateProperty(id, data, files){
+  const updates = {
+    title: data.title, address: data.address, price: data.price,
+    beds: data.beds, down_payment_required: data.downPaymentRequired
+  };
+  if(files && files.some(f=>f)){
+    showToast('Uploading photos…');
+    updates.photo_urls = await uploadPropertyPhotos(id, files);
+  }
+  const { error } = await db.from('properties').update(updates).eq('id', id);
+  if(error){ showToast(error.message); return; }
+  await loadPrivate();
+  render();
+  showToast('Property updated');
 }
 
 async function submitLead(profileId, data){
@@ -629,6 +646,7 @@ const ICONS = {
   plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
   chevRight: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`,
   x: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`,
+  edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`,
   bed: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2"/></svg>`,
   shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>`,
   rank: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>`,
@@ -640,48 +658,39 @@ const ICONS = {
 function heroHouses(){
   return `
     <div class="hero-house h1" style="opacity:0.5;">
-      <svg viewBox="0 0 140 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M18 140V88L70 46L122 88V140" stroke="var(--text-dim)" stroke-width="2.4" stroke-dasharray="4 7" stroke-linecap="round"/>
       </svg>
     </div>
 
     <div class="hero-house h2" style="opacity:0.85;">
-      <svg viewBox="0 0 170 165" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 170 158" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M15 158V100L85 42L155 100V158" fill="rgba(90,68,38,0.28)" stroke="var(--orange)" stroke-width="2.4"/>
         <rect x="68" y="112" width="30" height="46" fill="none" stroke="var(--orange)" stroke-width="1.8"/>
         <rect x="115" y="120" width="26" height="26" fill="none" stroke="var(--orange)" stroke-width="1.8"/>
         <rect x="29" y="120" width="22" height="22" fill="none" stroke="var(--orange)" stroke-width="1.6" opacity="0.75"/>
-        <line x1="4" y1="20" x2="4" y2="158" stroke="var(--text-dim)" stroke-width="1.4" opacity="0.6"/>
-        <line x1="4" y1="20" x2="46" y2="20" stroke="var(--text-dim)" stroke-width="1.4" opacity="0.6"/>
-        <line x1="46" y1="20" x2="46" y2="38" stroke="var(--text-dim)" stroke-width="1.4" opacity="0.6"/>
       </svg>
     </div>
 
     <div class="hero-house h3">
-      <svg viewBox="0 0 200 190" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <filter id="homeGlow" x="-70%" y="-70%" width="240%" height="240%">
-            <feGaussianBlur stdDeviation="4.5" result="b"/>
-            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
+      <svg viewBox="0 0 200 184" xmlns="http://www.w3.org/2000/svg">
         <ellipse cx="100" cy="178" rx="80" ry="6" fill="#000" opacity="0.35"/>
-        <path d="M20 172V95L100 30L180 95V172Z" fill="#241A10" stroke="var(--orange)" stroke-width="2.2"/>
-        <path d="M20 95L100 30L180 95" fill="none" stroke="var(--orange)" stroke-width="2.6" stroke-linejoin="round"/>
-        <rect x="86" y="120" width="34" height="52" fill="#150F09" stroke="var(--orange)" stroke-width="2"/>
-        <circle cx="114" cy="146" r="1.6" fill="var(--orange)"/>
-        <g filter="url(#homeGlow)">
-          <rect x="38" y="115" width="28" height="28" fill="var(--orange)" opacity="0.85"/>
-          <rect x="38" y="115" width="28" height="28" fill="none" stroke="var(--orange)" stroke-width="1.6"/>
-          <line x1="52" y1="115" x2="52" y2="143" stroke="#241A10" stroke-width="1.4"/>
-          <line x1="38" y1="129" x2="66" y2="129" stroke="#241A10" stroke-width="1.4"/>
-          <rect x="136" y="115" width="28" height="28" fill="var(--orange)" opacity="0.85"/>
-          <rect x="136" y="115" width="28" height="28" fill="none" stroke="var(--orange)" stroke-width="1.6"/>
-          <line x1="150" y1="115" x2="150" y2="143" stroke="#241A10" stroke-width="1.4"/>
-          <line x1="136" y1="129" x2="164" y2="129" stroke="#241A10" stroke-width="1.4"/>
-        </g>
-        <rect x="150" y="42" width="12" height="26" fill="#241A10" stroke="var(--orange)" stroke-width="1.8"/>
-        <path d="M74 172L60 172L48 178" stroke="var(--orange)" stroke-width="1.6" opacity="0.7" stroke-linecap="round"/>
+        <path d="M20 172V95L100 30L180 95V172Z" fill="#2F6FB0"/>
+        <path d="M14 98L100 26L186 98L172 101L100 40L28 101Z" fill="#8B5A3C"/>
+        <rect x="150" y="38" width="14" height="32" fill="#A85C3E"/>
+        <rect x="150" y="38" width="14" height="5" fill="#7A4530"/>
+        <rect x="86" y="122" width="30" height="50" fill="#F2EFE8"/>
+        <rect x="92" y="128" width="18" height="38" fill="#D8CFBC"/>
+        <circle cx="108" cy="147" r="1.8" fill="#8B5A3C"/>
+        <rect x="40" y="118" width="26" height="26" fill="#F2EFE8"/>
+        <rect x="44" y="122" width="18" height="18" fill="#F5B94A"/>
+        <line x1="53" y1="122" x2="53" y2="140" stroke="#F2EFE8" stroke-width="2"/>
+        <line x1="44" y1="131" x2="62" y2="131" stroke="#F2EFE8" stroke-width="2"/>
+        <rect x="134" y="118" width="26" height="26" fill="#F2EFE8"/>
+        <rect x="138" y="122" width="18" height="18" fill="#F5B94A"/>
+        <line x1="147" y1="122" x2="147" y2="140" stroke="#F2EFE8" stroke-width="2"/>
+        <line x1="138" y1="131" x2="156" y2="131" stroke="#F2EFE8" stroke-width="2"/>
+        <rect x="20" y="168" width="160" height="6" fill="#8A8578"/>
       </svg>
     </div>
   `;
@@ -828,7 +837,10 @@ function viewProperties(){
             <h2>${escapeHtml(p.title)}</h2>
             <div class="muted">${escapeHtml(p.address||'')}</div>
           </div>
-          <button onclick="deleteProperty('${p.id}')" style="background:none;border:none;color:var(--text-faint);cursor:pointer;">${ICONS.x}</button>
+          <div style="display:flex; gap:6px; flex-shrink:0;">
+            <button onclick='openEditPropertyModal(${JSON.stringify(p.id)})' style="background:none;border:1px solid var(--line);border-radius:0;padding:7px;color:var(--text-dim);cursor:pointer;display:flex;">${ICONS.edit.replace('width="24"','width="15"').replace('height="24"','height="15"')}</button>
+            <button onclick="deleteProperty('${p.id}')" style="background:none;border:1px solid var(--line);border-radius:0;padding:7px;color:var(--text-dim);cursor:pointer;display:flex;">${ICONS.x.replace('width="24"','width="15"').replace('height="24"','height="15"')}</button>
+          </div>
         </div>
         <div style="display:flex; align-items:center; gap:14px; margin-top:10px; flex-wrap:wrap;">
           <div class="prop-price">${fmtMoney(p.price)}/mo</div>
@@ -950,28 +962,47 @@ function openLoginModal(){
   document.body.appendChild(overlay);
 }
 
-function openAddPropertyModal(){
-  const overlay = document.createElement('div');
-  overlay.className='modal-overlay';
-  overlay.id='modalOverlay';
-  overlay.innerHTML = `
+let editingPropertyId = null;
+
+function propertyModalHtml(p){
+  return `
   <div class="modal">
-    <div class="modal-header"><h2>Add a property</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <div class="field"><label>Title</label><input id="mpTitle" placeholder="e.g. 3/2 house near Lake Nona"/></div>
-    <div class="field"><label>Address</label><input id="mpAddress" placeholder="Street, city"/></div>
-    <div class="field"><label>Monthly rent</label><input id="mpPrice" type="number" placeholder="1800"/></div>
-    <div class="field"><label>Down payment required</label><input id="mpDown" type="number" placeholder="3000"/></div>
-    <div class="field"><label>Bedrooms</label><input id="mpBeds" type="number" placeholder="3"/></div>
+    <div class="modal-header"><h2>${p ? 'Edit property' : 'Add a property'}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="field"><label>Title</label><input id="mpTitle" placeholder="e.g. 3/2 house near Lake Nona" value="${p ? escapeHtml(p.title) : ''}"/></div>
+    <div class="field"><label>Address</label><input id="mpAddress" placeholder="Street, city" value="${p ? escapeHtml(p.address||'') : ''}"/></div>
+    <div class="field"><label>Monthly rent</label><input id="mpPrice" type="number" placeholder="1800" value="${p && p.price ? p.price : ''}"/></div>
+    <div class="field"><label>Down payment required</label><input id="mpDown" type="number" placeholder="3000" value="${p && p.down_payment_required ? p.down_payment_required : ''}"/></div>
+    <div class="field"><label>Bedrooms</label><input id="mpBeds" type="number" placeholder="3" value="${p && p.beds ? p.beds : ''}"/></div>
     <div class="field">
-      <label>Outside photo</label>
+      <label>Outside photo${p ? ' (leave blank to keep current)' : ''}</label>
       <input id="mpPhoto1" type="file" accept="image/*"/>
     </div>
     <div class="field">
-      <label>Inside photo</label>
+      <label>Inside photo${p ? ' (leave blank to keep current)' : ''}</label>
       <input id="mpPhoto2" type="file" accept="image/*"/>
     </div>
-    <button class="btn btn-primary" id="mpSubmitBtn" onclick="submitAddProperty()">Add property</button>
+    <button class="btn btn-primary" id="mpSubmitBtn" onclick="submitAddProperty()">${p ? 'Save changes' : 'Add property'}</button>
   </div>`;
+}
+
+function openAddPropertyModal(){
+  editingPropertyId = null;
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modalOverlay';
+  overlay.innerHTML = propertyModalHtml(null);
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+  document.body.appendChild(overlay);
+}
+
+function openEditPropertyModal(id){
+  const p = state.properties.find(x=>x.id===id);
+  if(!p) return;
+  editingPropertyId = id;
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modalOverlay';
+  overlay.innerHTML = propertyModalHtml(p);
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
   document.body.appendChild(overlay);
 }
@@ -986,8 +1017,13 @@ async function submitAddProperty(){
   const f1 = document.getElementById('mpPhoto1').files[0];
   const f2 = document.getElementById('mpPhoto2').files[0];
   const btn = document.getElementById('mpSubmitBtn');
-  btn.disabled = true; btn.textContent = 'Adding…';
-  await addProperty({title, address, price, beds, downPaymentRequired}, [f1, f2]);
+  btn.disabled = true; btn.textContent = editingPropertyId ? 'Saving…' : 'Adding…';
+  if(editingPropertyId){
+    await updateProperty(editingPropertyId, {title, address, price, beds, downPaymentRequired}, [f1, f2]);
+  } else {
+    await addProperty({title, address, price, beds, downPaymentRequired}, [f1, f2]);
+  }
+  editingPropertyId = null;
   closeModal();
 }
 
