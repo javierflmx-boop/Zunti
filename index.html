@@ -615,7 +615,8 @@ async function submitLead(profileId, data){
   const { error } = await db.from('leads').insert({
     profile_id: profileId, name: data.name, phone: data.phone, email: data.email,
     down_payment: data.downPayment, budget: data.budget, household_size: data.householdSize,
-    move_date: data.moveDate, property_title: data.propertyTitle, status: 'new'
+    move_date: data.moveDate, property_title: data.propertyTitle, status: 'new',
+    employer: data.employer, monthly_income: data.income || null, has_pet: data.hasPet
   });
   if(error){ showToast('Something went wrong — try again'); return false; }
   return true;
@@ -1201,10 +1202,18 @@ function openInterestModal(propId){
     <div class="field"><label>Your name</label><input id="liName" placeholder="Full name"/></div>
     <div class="field"><label>Phone number</label><input id="liPhone" placeholder="(555) 555-0100"/></div>
     <div class="field"><label>Email</label><input id="liEmail" type="email" placeholder="you@email.com"/></div>
+    <div class="field"><label>Where do you work?</label><input id="liEmployer" placeholder="Employer or company name"/></div>
     <div class="field"><label>How many people will be living here?</label><input id="liHousehold" type="number" placeholder="3"/></div>
     <div class="field"><label>When are you available to move?</label><input id="liDate" type="date" min="${new Date().toISOString().split('T')[0]}"/></div>
     <div class="field">
-      <label>Do you have a deposit available?</label>
+      <label>Do you have a pet?</label>
+      <div class="segmented" id="petSeg">
+        <button type="button" class="seg-btn" data-seg="yes">Yes</button>
+        <button type="button" class="seg-btn" data-seg="no">No</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Can you pay deposit?</label>
       <div class="segmented" id="depositSeg">
         <button type="button" class="seg-btn" data-seg="yes">Yes</button>
         <button type="button" class="seg-btn" data-seg="no">No</button>
@@ -1214,10 +1223,18 @@ function openInterestModal(propId){
       <label>How much?</label>
       <input id="liDown" type="number" placeholder="10000"/>
     </div>
+    <div class="field"><label>Monthly income (optional)</label><input id="liIncome" type="number" placeholder="4000"/></div>
     <button class="btn btn-primary" onclick="submitInterest('${propId}')">Submit</button>
   </div>`;
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
   document.body.appendChild(overlay);
+
+  document.querySelectorAll('#petSeg .seg-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('#petSeg .seg-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
 
   const seg = document.getElementById('depositSeg');
   const amountField = document.getElementById('depositAmountField');
@@ -1240,16 +1257,20 @@ async function submitInterest(propId){
   const name = document.getElementById('liName').value.trim();
   const phone = document.getElementById('liPhone').value.trim();
   const email = document.getElementById('liEmail').value.trim();
+  const employer = document.getElementById('liEmployer').value.trim();
   const householdSize = document.getElementById('liHousehold').value;
   const moveDate = document.getElementById('liDate').value.trim();
+  const income = document.getElementById('liIncome').value;
+  const petChoice = document.querySelector('#petSeg .seg-btn.active');
+  const hasPet = petChoice ? (petChoice.dataset.seg === 'yes') : null;
   const depositChoice = document.querySelector('#depositSeg .seg-btn.active');
-  if(!depositChoice){ showToast('Let us know if you have a deposit'); return; }
+  if(!depositChoice){ showToast('Let us know if you can pay deposit'); return; }
   const hasDeposit = depositChoice.dataset.seg === 'yes';
   const downPayment = hasDeposit ? document.getElementById('liDown').value : '0';
   if(!name || !phone){ showToast('Name and phone are required'); return; }
   if(hasDeposit && !downPayment){ showToast('Enter your deposit amount'); return; }
   const prop = state.publicProperties.find(p=>p.id===propId);
-  const ok = await submitLead(state.publicProfile.id, { name, phone, email, householdSize, downPayment, moveDate, propertyTitle: prop ? prop.title : '' });
+  const ok = await submitLead(state.publicProfile.id, { name, phone, email, employer, householdSize, downPayment, moveDate, income, hasPet, propertyTitle: prop ? prop.title : '' });
   if(!ok) return;
   closeModal();
   showConfirmModal();
@@ -1282,8 +1303,11 @@ function openLeadDetail(id){
     <div class="card" style="margin-bottom:14px;">
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Phone</span><span>${escapeHtml(l.phone||'-')}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Email</span><span>${escapeHtml(l.email||'-')}</span></div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Employer</span><span>${escapeHtml(l.employer||'-')}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Down payment</span><span class="mono" style="color:var(--gold); font-weight:700;">${fmtMoney(l.down_payment)}</span></div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Monthly income</span><span>${l.monthly_income ? fmtMoney(l.monthly_income) : '-'}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Household size</span><span>${escapeHtml(l.household_size||'-')}</span></div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Has pet</span><span>${l.has_pet===true?'Yes':l.has_pet===false?'No':'-'}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Move-in</span><span>${escapeHtml(l.move_date||'-')}</span></div>
       <div style="display:flex; justify-content:space-between; padding:6px 0;"><span class="muted">Submitted</span><span>${timeAgo(l.created_at)}</span></div>
     </div>
