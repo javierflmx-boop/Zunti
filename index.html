@@ -611,6 +611,17 @@ async function updateProperty(id, data, files){
   return true;
 }
 
+async function togglePropertyStatus(id){
+  const prop = state.properties.find(p=>p.id===id);
+  if(!prop) return;
+  const newStatus = prop.status === 'rented' ? 'available' : 'rented';
+  const { error } = await db.from('properties').update({ status: newStatus }).eq('id', id);
+  if(error){ showToast(error.message); return; }
+  await loadPrivate();
+  render();
+  showToast(newStatus === 'rented' ? 'Marked as rented' : 'Marked as available');
+}
+
 async function submitLead(profileId, data){
   const { error } = await db.from('leads').insert({
     profile_id: profileId, name: data.name, phone: data.phone, email: data.email,
@@ -865,11 +876,13 @@ function viewProperties(){
   ${state.properties.length===0 ? emptyState('No properties yet','Add your first one so people can express interest.') :
     state.properties.map(p=>{
       const photos = (p.photo_urls || []).filter(Boolean);
+      const isRented = p.status === 'rented';
       return `
-    <div class="prop-card">
+    <div class="prop-card" style="${isRented ? 'opacity:0.6;' : ''}">
       ${photos.length > 0 ? `
-      <div style="display:flex; height:120px;">
+      <div style="display:flex; height:120px; position:relative;">
         ${photos.map(url=>`<div style="flex:1; background-image:url('${escapeHtml(url)}'); background-size:cover; background-position:center;"></div>`).join('')}
+        ${isRented ? `<div style="position:absolute; top:8px; left:8px; background:var(--danger); color:#fff; font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:4px 10px;">Rented</div>` : ''}
       </div>` : `<div class="prop-img">No photo yet</div>`}
       <div class="prop-body">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
@@ -877,7 +890,8 @@ function viewProperties(){
             <h2>${escapeHtml(p.title)}</h2>
             <div class="muted">${escapeHtml(p.address||'')}</div>
           </div>
-          <div style="display:flex; gap:6px; flex-shrink:0;">
+          <div style="display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap;">
+            <button onclick="togglePropertyStatus('${p.id}')" style="background:${isRented ? 'var(--card)' : 'var(--orange)'};border:1px solid ${isRented ? 'var(--line-h)' : 'var(--orange)'};border-radius:0;padding:8px 12px;color:${isRented ? 'var(--text)' : 'var(--bg)'};cursor:pointer;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">${isRented ? 'Mark Available' : 'Mark Rented'}</button>
             <button onclick='openEditPropertyModal(${JSON.stringify(p.id)})' style="background:var(--cream);border:1px solid var(--cream);border-radius:0;padding:8px 12px;color:var(--bg);cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">${ICONS.edit.replace('width="24"','width="14"').replace('height="24"','height="14"')} Edit</button>
             <button onclick="deleteProperty('${p.id}')" style="background:var(--cream);border:1px solid var(--cream);border-radius:0;padding:8px 12px;color:#B23A2E;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">${ICONS.x.replace('width="24"','width="14"').replace('height="24"','height="14"')} Delete</button>
           </div>
@@ -1000,6 +1014,8 @@ function viewPublic(){
     return `<div class="hero-public"><h1>Link not found</h1><p class="muted">This profile doesn't exist yet.</p></div>`;
   }
   const initials = (prof.business_name.match(/[A-Za-z]/g) || ['Z']).slice(0,2).join('').toUpperCase();
+  const available = state.publicProperties.filter(p => p.status !== 'rented');
+  const rented = state.publicProperties.filter(p => p.status === 'rented');
   return `
   ${houseHero(escapeHtml(prof.business_name))}
   <div class="hero-public" style="padding-top:26px;">
@@ -1007,14 +1023,23 @@ function viewPublic(){
     <h1>${escapeHtml(prof.business_name)}</h1>
     <p class="muted">View the photos, then tap "I'm interested" on any property that's a fit.</p>
   </div>
-  ${state.publicProperties.length===0 ? `<div class="empty p-dim">No properties listed right now.</div>` :
-   state.publicProperties.map(p=>{
-     const photos = (p.photo_urls || []).filter(Boolean);
-     return `
-    <div class="public-prop-card">
+  ${state.publicProperties.length===0 ? `<div class="empty p-dim">No properties listed right now.</div>` : ''}
+  ${available.map(p=>publicPropertyCard(p, false)).join('')}
+  ${rented.length > 0 ? `
+  <div class="eyebrow" style="margin:26px 0 12px; text-align:center;">Recently rented</div>
+  ${rented.map(p=>publicPropertyCard(p, true)).join('')}
+  ` : ''}
+  `;
+}
+
+function publicPropertyCard(p, isRented){
+  const photos = (p.photo_urls || []).filter(Boolean);
+  return `
+    <div class="public-prop-card" style="${isRented ? 'opacity:0.55;' : ''}">
       ${photos.length > 0 ? `
-      <div style="display:flex; height:150px;">
+      <div style="display:flex; height:150px; position:relative;">
         ${photos.map(url=>`<div style="flex:1; background-image:url('${escapeHtml(url)}'); background-size:cover; background-position:center;"></div>`).join('')}
+        ${isRented ? `<div style="position:absolute; top:8px; left:8px; background:#221E18; color:#fff; font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:4px 10px;">Rented</div>` : ''}
       </div>` : `<div class="public-prop-img">No photo yet</div>`}
       <div class="prop-body">
         <h2>${escapeHtml(p.title)}</h2>
@@ -1024,12 +1049,12 @@ function viewPublic(){
             <div class="prop-price">${fmtMoney(p.price)}/mo</div>
             ${p.down_payment_required ? `<div class="muted" style="font-size:12px; margin-top:2px;">${fmtMoney(p.down_payment_required)} down required</div>` : (p.deposit_required ? `<div class="muted" style="font-size:12px; margin-top:2px;">Deposit required</div>` : '')}
           </div>
-          <span onclick="openInterestModal('${p.id}')" style="color:var(--orange); font-weight:700; font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; padding:8px 4px;">I'm interested ${ICONS.chevRight.replace('currentColor','#FF6B00')}</span>
+          ${isRented
+            ? `<span style="color:var(--text-faint); font-weight:700; font-size:13px;">No longer available</span>`
+            : `<span onclick="openInterestModal('${p.id}')" style="color:var(--orange); font-weight:700; font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; padding:8px 4px;">I'm interested ${ICONS.chevRight.replace('currentColor','#FF6B00')}</span>`}
         </div>
       </div>
     </div>`;
-   }).join('')}
-  `;
 }
 
 function escapeHtml(s){
