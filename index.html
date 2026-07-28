@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1016,7 +1017,43 @@ function viewShare(){
     <p class="muted" style="margin-top:8px;">1. You post the link with your listing.<br>2. They tap in, see the property, and fill out their deposit info.<br>3. You check the Leads tab to see who's ready to move forward.<br>4. Only schedule showings once you've confirmed the fit.</p>
   </div>
   <button class="btn btn-ghost" style="margin-top:16px;" onclick="previewPublic()">Preview what visitors see →</button>
+  <button class="btn btn-ghost" style="margin-top:10px;" onclick="location.hash='#/profile'">Edit my profile →</button>
   `;
+}
+
+function viewProfile(){
+  const p = state.profile;
+  return `
+  <div class="eyebrow">Your account</div>
+  <h1 style="margin-bottom:18px;">Profile</h1>
+  <div class="field"><label>Business or your name</label><input id="pfName" value="${p ? escapeHtml(p.business_name) : ''}"/></div>
+  <div class="field"><label>Phone number</label><input id="pfPhone" value="${p && p.phone ? escapeHtml(p.phone) : ''}"/></div>
+  <div class="field"><label>Email (used for lead notifications)</label><input id="pfEmail" type="email" value="${p && p.email ? escapeHtml(p.email) : ''}"/></div>
+  <button class="btn btn-primary" id="pfSaveBtn" onclick="submitProfileUpdate()">Save changes</button>
+  <p class="muted" style="margin-top:16px; font-size:12px;">Your public link (${p ? escapeHtml(p.slug) : ''}) stays the same even if you change your name.</p>
+  `;
+}
+
+async function updateProfile(data){
+  const { error } = await db.from('profiles').update({
+    business_name: data.businessName, phone: data.phone, email: data.email
+  }).eq('id', state.currentUser.id);
+  if(error){ console.error('updateProfile error:', error); showToast(error.message); return false; }
+  await loadPrivate();
+  render();
+  showToast('Profile updated');
+  return true;
+}
+
+async function submitProfileUpdate(){
+  const businessName = document.getElementById('pfName').value.trim();
+  const phone = document.getElementById('pfPhone').value.trim();
+  const email = document.getElementById('pfEmail').value.trim();
+  if(!businessName){ showToast('Business name is required'); return; }
+  const btn = document.getElementById('pfSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const ok = await updateProfile({businessName, phone, email});
+  btn.disabled = false; btn.textContent = 'Save changes';
 }
 
 function viewPublic(){
@@ -1460,6 +1497,7 @@ function render(){
   else if(state.route==='properties') content = viewProperties();
   else if(state.route==='leads') content = viewLeads();
   else if(state.route==='share') content = viewShare();
+  else if(state.route==='profile') content = viewProfile();
   else if(state.route==='admin') content = viewAdmin();
   else content = viewDashboard();
 
