@@ -641,6 +641,7 @@ async function updateLeadStatus(id, status){
   await db.from('leads').update({ status }).eq('id', id);
   state.leads = state.leads.map(l => l.id===id ? {...l, status} : l);
   render();
+  showToast('Status updated to ' + status);
 }
 
 let toastTimer;
