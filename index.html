@@ -365,6 +365,7 @@ let state = {
   properties: [],
   leads: [],
   publicSlug: null,
+  publicPropertyId: null,
   publicProperties: [],
   publicProfile: null,
   selectedProperty: null,
@@ -401,7 +402,8 @@ async function route(){
   if(parts[0] === 'p' && parts[1]){
     state.route = 'public';
     state.publicSlug = parts[1];
-    await loadPublic(parts[1]);
+    state.publicPropertyId = parts[2] || null;
+    await loadPublic(parts[1], parts[2] || null);
     render();
     return;
   }
@@ -448,11 +450,13 @@ async function loadPrivate(){
   state.leads = leads || [];
 }
 
-async function loadPublic(slug){
+async function loadPublic(slug, propertyId){
   const { data: profile } = await db.from('profiles').select('*').eq('slug', slug).single();
   state.publicProfile = profile;
   if(profile){
-    const { data: properties } = await db.from('properties').select('*').eq('profile_id', profile.id).order('created_at', { ascending: false });
+    let query = db.from('properties').select('*').eq('profile_id', profile.id).order('created_at', { ascending: false });
+    if(propertyId) query = query.eq('id', propertyId);
+    const { data: properties } = await query;
     state.publicProperties = properties || [];
     const isOwnerPreview = state.currentUser && state.currentUser.id === profile.id;
     if(!isOwnerPreview){
@@ -655,6 +659,12 @@ function copyLink(){
   const link = location.origin + location.pathname + '#/p/' + state.profile?.slug;
   navigator.clipboard?.writeText(link).catch(()=>{});
   showToast('Link copied — post it anywhere');
+}
+
+function copyPropertyLink(propId){
+  const link = location.origin + location.pathname + '#/p/' + state.profile?.slug + '/' + propId;
+  navigator.clipboard?.writeText(link).catch(()=>{});
+  showToast('Link copied — shows only this property');
 }
 
 // ---------------- House hero art ----------------
@@ -891,6 +901,7 @@ function viewProperties(){
             <div class="muted">${escapeHtml(p.address||'')}</div>
           </div>
           <div style="display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap;">
+            <button onclick="copyPropertyLink('${p.id}')" style="background:var(--card);border:1px solid var(--line-h);border-radius:0;padding:8px 12px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">${ICONS.share.replace('width="24"','width="13"').replace('height="24"','height="13"')} Copy Link</button>
             <button onclick="togglePropertyStatus('${p.id}')" style="background:${isRented ? 'var(--card)' : 'var(--orange)'};border:1px solid ${isRented ? 'var(--line-h)' : 'var(--orange)'};border-radius:0;padding:8px 12px;color:${isRented ? 'var(--text)' : 'var(--bg)'};cursor:pointer;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">${isRented ? 'Mark Available' : 'Mark Rented'}</button>
             <button onclick='openEditPropertyModal(${JSON.stringify(p.id)})' style="background:var(--cream);border:1px solid var(--cream);border-radius:0;padding:8px 12px;color:var(--bg);cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">${ICONS.edit.replace('width="24"','width="14"').replace('height="24"','height="14"')} Edit</button>
             <button onclick="deleteProperty('${p.id}')" style="background:var(--cream);border:1px solid var(--cream);border-radius:0;padding:8px 12px;color:#B23A2E;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">${ICONS.x.replace('width="24"','width="14"').replace('height="24"','height="14"')} Delete</button>
@@ -1014,6 +1025,7 @@ function viewPublic(){
     return `<div class="hero-public"><h1>Link not found</h1><p class="muted">This profile doesn't exist yet.</p></div>`;
   }
   const initials = (prof.business_name.match(/[A-Za-z]/g) || ['Z']).slice(0,2).join('').toUpperCase();
+  const isSingle = !!state.publicPropertyId;
   const available = state.publicProperties.filter(p => p.status !== 'rented');
   const rented = state.publicProperties.filter(p => p.status === 'rented');
   return `
@@ -1021,11 +1033,13 @@ function viewPublic(){
   <div class="hero-public" style="padding-top:26px;">
     <div class="avatar-circle display">${initials}</div>
     <h1>${escapeHtml(prof.business_name)}</h1>
-    <p class="muted">View the photos, then tap "I'm interested" on any property that's a fit.</p>
+    <p class="muted">${isSingle ? 'View the photos, then tap "I\'m interested" if it\'s a fit.' : 'View the photos, then tap "I\'m interested" on any property that\'s a fit.'}</p>
   </div>
-  ${state.publicProperties.length===0 ? `<div class="empty p-dim">No properties listed right now.</div>` : ''}
-  ${available.map(p=>publicPropertyCard(p, false)).join('')}
-  ${rented.length > 0 ? `
+  ${state.publicProperties.length===0 ? `<div class="empty p-dim">${isSingle ? 'This listing is no longer available.' : 'No properties listed right now.'}</div>` : ''}
+  ${isSingle
+    ? state.publicProperties.map(p=>publicPropertyCard(p, p.status === 'rented')).join('')
+    : available.map(p=>publicPropertyCard(p, false)).join('')}
+  ${!isSingle && rented.length > 0 ? `
   <div class="eyebrow" style="margin:26px 0 12px; text-align:center;">Recently rented</div>
   ${rented.map(p=>publicPropertyCard(p, true)).join('')}
   ` : ''}
