@@ -637,11 +637,44 @@ async function submitLead(profileId, data){
   return true;
 }
 
-async function updateLeadStatus(id, status){
-  await db.from('leads').update({ status }).eq('id', id);
-  state.leads = state.leads.map(l => l.id===id ? {...l, status} : l);
+async function updateLeadStatus(id, status, showingAt){
+  const updates = { status };
+  if(showingAt !== undefined) updates.showing_at = showingAt;
+  await db.from('leads').update(updates).eq('id', id);
+  state.leads = state.leads.map(l => l.id===id ? {...l, ...updates} : l);
   render();
   showToast('Status updated to ' + status);
+}
+
+function openScheduleModal(id, setStatus){
+  const l = state.leads.find(x=>x.id===id);
+  if(!l) return;
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modalOverlay';
+  const now = new Date();
+  const defaultDate = now.toISOString().split('T')[0];
+  overlay.innerHTML = `
+  <div class="modal">
+    <div class="modal-header"><h2>${setStatus ? 'Schedule showing' : 'Set a meeting date'}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <p class="muted" style="margin-bottom:16px;">${escapeHtml(l.name)} will receive an email with this exact date and time.</p>
+    <div class="field"><label>Date</label><input id="schDate" type="date" min="${defaultDate}" value="${l.showing_at ? new Date(l.showing_at).toISOString().split('T')[0] : defaultDate}"/></div>
+    <div class="field"><label>Time</label><input id="schTime" type="time" value="${l.showing_at ? new Date(l.showing_at).toTimeString().slice(0,5) : '15:00'}"/></div>
+    <button class="btn btn-primary" onclick="submitSchedule('${id}', ${setStatus ? 'true' : 'false'})">Confirm and notify</button>
+  </div>`;
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+  document.body.appendChild(overlay);
+}
+
+async function submitSchedule(id, setStatus){
+  const date = document.getElementById('schDate').value;
+  const time = document.getElementById('schTime').value;
+  if(!date || !time){ showToast('Pick a date and time'); return; }
+  const showingAt = new Date(date + 'T' + time).toISOString();
+  const l = state.leads.find(x=>x.id===id);
+  const status = setStatus ? 'scheduled' : (l ? l.status : 'new');
+  await updateLeadStatus(id, status, showingAt);
+  closeModal();
 }
 
 let toastTimer;
@@ -1406,8 +1439,10 @@ function openLeadDetail(id){
     <div class="segmented" style="margin-top:6px;">
       <button class="seg-btn ${l.status==='new'?'active':''}" onclick="updateLeadStatus('${l.id}','new'); closeModal();">New</button>
       <button class="seg-btn ${l.status==='qualified'?'active':''}" onclick="updateLeadStatus('${l.id}','qualified'); closeModal();">Qualified</button>
-      <button class="seg-btn ${l.status==='scheduled'?'active':''}" onclick="updateLeadStatus('${l.id}','scheduled'); closeModal();">Scheduled</button>
+      <button class="seg-btn ${l.status==='scheduled'?'active':''}" onclick="openScheduleModal('${l.id}', true)">Scheduled</button>
     </div>
+    ${l.showing_at ? `<p class="muted" style="margin-top:10px; font-size:13px;">Meeting set for ${new Date(l.showing_at).toLocaleString('en-US', {weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}</p>` : ''}
+    <button class="btn btn-ghost" style="margin-top:12px;" onclick="openScheduleModal('${l.id}', false)">${l.showing_at ? 'Change meeting date' : '+ Add a meeting date (optional)'}</button>
     ${l.phone ? `<a class="btn btn-primary" style="margin-top:16px; text-decoration:none;" href="tel:${escapeHtml(l.phone)}">Call ${escapeHtml(l.name.split(' ')[0])}</a>` : ''}
   </div>`;
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
