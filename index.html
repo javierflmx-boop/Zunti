@@ -701,6 +701,26 @@ function copyPropertyLink(propId){
   showToast('Link copied — shows only this property');
 }
 
+function openPropertyQR(propId){
+  const p = state.properties.find(x=>x.id===propId);
+  const link = location.origin + location.pathname + '#/p/' + state.profile?.slug + '/' + propId;
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=' + encodeURIComponent(link);
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modalOverlay';
+  overlay.innerHTML = `
+  <div class="modal" style="text-align:center;">
+    <div class="modal-header"><h2>${p ? escapeHtml(p.title) : 'Property'} QR code</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <p class="muted" style="margin-bottom:16px;">Scanning this opens only this property — nothing else on your list.</p>
+    <img src="${qrUrl}" alt="QR code" style="width:200px; height:200px; background:#fff; padding:12px;"/>
+    <div style="margin-top:16px;">
+      <a class="btn btn-primary" style="text-decoration:none;" href="${qrUrl}" download="zunti-${p ? p.title.replace(/\\s+/g,'-').toLowerCase() : 'property'}-qr.png">Download QR code</a>
+    </div>
+  </div>`;
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+  document.body.appendChild(overlay);
+}
+
 // ---------------- House hero art ----------------
 function houseHero(caption){
   return `
@@ -936,6 +956,7 @@ function viewProperties(){
           </div>
           <div style="display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap;">
             <button onclick="copyPropertyLink('${p.id}')" style="background:var(--card);border:1px solid var(--line-h);border-radius:0;padding:8px 12px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">${ICONS.share.replace('width="24"','width="13"').replace('height="24"','height="13"')} Copy Link</button>
+            <button onclick="openPropertyQR('${p.id}')" style="background:var(--card);border:1px solid var(--line-h);border-radius:0;padding:8px 12px;color:var(--text);cursor:pointer;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">QR</button>
             <button onclick="togglePropertyStatus('${p.id}')" style="background:${isRented ? 'var(--card)' : 'var(--orange)'};border:1px solid ${isRented ? 'var(--line-h)' : 'var(--orange)'};border-radius:0;padding:8px 12px;color:${isRented ? 'var(--text)' : 'var(--bg)'};cursor:pointer;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">${isRented ? 'Mark Available' : 'Mark Rented'}</button>
             <button onclick='openEditPropertyModal(${JSON.stringify(p.id)})' style="background:var(--cream);border:1px solid var(--cream);border-radius:0;padding:8px 12px;color:var(--bg);cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">${ICONS.edit.replace('width="24"','width="14"').replace('height="24"','height="14"')} Edit</button>
             <button onclick="deleteProperty('${p.id}')" style="background:var(--cream);border:1px solid var(--cream);border-radius:0;padding:8px 12px;color:#B23A2E;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--fb);font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;">${ICONS.x.replace('width="24"','width="14"').replace('height="24"','height="14"')} Delete</button>
@@ -1037,6 +1058,7 @@ function viewAdmin(){
 
 function viewShare(){
   const link = state.profile?.slug ? (location.origin + location.pathname + '#/p/' + state.profile?.slug) : '';
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=' + encodeURIComponent(link);
   return `
   <div class="eyebrow">Your public link</div>
   <h1 style="margin-bottom:8px;">Share &amp; qualify</h1>
@@ -1045,6 +1067,16 @@ function viewShare(){
     <div class="mono">${link}</div>
     <button class="copy-btn" onclick="copyLink()">Copy</button>
   </div>
+
+  <div class="card" style="margin-top:16px; text-align:center;">
+    <h2 style="margin-bottom:4px;">Scan to open</h2>
+    <p class="muted" style="margin-bottom:16px;">Print this on a yard sign, flyer, or show it in person — scanning it opens your link directly, no typing.</p>
+    <img src="${qrUrl}" alt="QR code" style="width:200px; height:200px; background:#fff; padding:12px;"/>
+    <div style="margin-top:16px;">
+      <a class="btn btn-ghost" style="text-decoration:none;" href="${qrUrl}" download="zunti-qr-${state.profile?.slug||'code'}.png">Download QR code</a>
+    </div>
+  </div>
+
   <div class="card" style="margin-top:8px;">
     <h2>How it works</h2>
     <p class="muted" style="margin-top:8px;">1. You post the link with your listing.<br>2. They tap in, see the property, and fill out their deposit info.<br>3. You check the Leads tab to see who's ready to move forward.<br>4. Only schedule showings once you've confirmed the fit.</p>
