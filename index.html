@@ -1471,10 +1471,9 @@ function openLeadDetail(id){
     <div class="segmented" style="margin-top:6px;">
       <button class="seg-btn ${l.status==='new'?'active':''}" onclick="updateLeadStatus('${l.id}','new'); closeModal();">New</button>
       <button class="seg-btn ${l.status==='qualified'?'active':''}" onclick="updateLeadStatus('${l.id}','qualified'); closeModal();">Qualified</button>
-      <button class="seg-btn ${l.status==='scheduled'?'active':''}" onclick="openScheduleModal('${l.id}', true)">Scheduled</button>
     </div>
     ${l.showing_at ? `<p class="muted" style="margin-top:10px; font-size:13px;">Meeting set for ${new Date(l.showing_at).toLocaleString('en-US', {weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}</p>` : ''}
-    <button class="btn btn-ghost" style="margin-top:12px;" onclick="openScheduleModal('${l.id}', false)">${l.showing_at ? 'Change meeting date' : '+ Add a meeting date (optional)'}</button>
+    <button class="btn btn-ghost" style="margin-top:12px;" onclick="openScheduleModal('${l.id}', false)">${l.showing_at ? 'Change meeting date' : '+ Set a meeting date'}</button>
     ${l.phone ? `<a class="btn btn-primary" style="margin-top:16px; text-decoration:none;" href="tel:${escapeHtml(l.phone)}">Call ${escapeHtml(l.name.split(' ')[0])}</a>` : ''}
   </div>`;
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
