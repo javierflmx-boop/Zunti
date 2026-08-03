@@ -646,7 +646,7 @@ async function updateLeadStatus(id, status, showingAt){
   showToast('Status updated to ' + status);
 }
 
-function openScheduleModal(id, setStatus){
+function openQualifyModal(id){
   const l = state.leads.find(x=>x.id===id);
   if(!l) return;
   const overlay = document.createElement('div');
@@ -656,34 +656,22 @@ function openScheduleModal(id, setStatus){
   const defaultDate = now.toISOString().split('T')[0];
   overlay.innerHTML = `
   <div class="modal">
-    <div class="modal-header"><h2>${setStatus ? 'Schedule showing' : 'Set a meeting date'}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <p class="muted" style="margin-bottom:16px;">${escapeHtml(l.name)} will receive an email with this exact date and time.</p>
-    <div class="field"><label>Date</label><input id="schDate" type="date" min="${defaultDate}" value="${l.showing_at ? new Date(l.showing_at).toISOString().split('T')[0] : defaultDate}"/></div>
-    <div class="field"><label>Time</label><input id="schTime" type="time" value="${l.showing_at ? new Date(l.showing_at).toTimeString().slice(0,5) : '15:00'}"/></div>
-    <button class="btn btn-primary" onclick="submitSchedule('${id}', ${setStatus ? 'true' : 'false'})">Confirm and notify</button>
+    <div class="modal-header"><h2>Mark as qualified</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <p class="muted" style="margin-bottom:16px;">${escapeHtml(l.name)} will get one email. If you set a day and time, they'll see the exact appointment. If you leave it blank, they'll be asked to call you to arrange a time instead.</p>
+    <div class="field"><label>Day to see the house (optional)</label><input id="qfDate" type="date" min="${defaultDate}" value="${l.showing_at ? new Date(l.showing_at).toISOString().split('T')[0] : ''}"/></div>
+    <div class="field"><label>Time (optional)</label><input id="qfTime" type="time" value="${l.showing_at ? new Date(l.showing_at).toTimeString().slice(0,5) : ''}"/></div>
+    <button class="btn btn-primary" onclick="submitQualify('${id}')">Confirm and notify</button>
   </div>`;
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
   document.body.appendChild(overlay);
 }
 
-async function submitSchedule(id, setStatus){
-  const date = document.getElementById('schDate').value;
-  const time = document.getElementById('schTime').value;
-  if(!date || !time){ showToast('Pick a date and time'); return; }
-  const showingAt = new Date(date + 'T' + time).toISOString();
-  const l = state.leads.find(x=>x.id===id);
-  const status = setStatus ? 'scheduled' : (l ? l.status : 'new');
-  await updateLeadStatus(id, status, showingAt);
+async function submitQualify(id){
+  const date = document.getElementById('qfDate').value;
+  const time = document.getElementById('qfTime').value;
+  const showingAt = (date && time) ? new Date(date + 'T' + time).toISOString() : null;
+  await updateLeadStatus(id, 'qualified', showingAt);
   closeModal();
-}
-
-async function requestCallToArrange(id){
-  const { error } = await db.from('leads').update({ call_requested_at: new Date().toISOString() }).eq('id', id);
-  if(error){ showToast(error.message); return; }
-  await loadPrivate();
-  render();
-  closeModal();
-  showToast('They\'ll get a message asking them to call you');
 }
 
 let toastTimer;
@@ -1479,11 +1467,10 @@ function openLeadDetail(id){
     <label>Status</label>
     <div class="segmented" style="margin-top:6px;">
       <button class="seg-btn ${l.status==='new'?'active':''}" onclick="updateLeadStatus('${l.id}','new'); closeModal();">New</button>
-      <button class="seg-btn ${l.status==='qualified'?'active':''}" onclick="updateLeadStatus('${l.id}','qualified'); closeModal();">Qualified</button>
+      <button class="seg-btn ${l.status==='qualified'?'active':''}" onclick="openQualifyModal('${l.id}')">Qualified</button>
     </div>
-    ${l.showing_at ? `<p class="muted" style="margin-top:10px; font-size:13px;">Meeting set for ${new Date(l.showing_at).toLocaleString('en-US', {weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}</p>` : ''}
-    <button class="btn btn-ghost" style="margin-top:12px;" onclick="openScheduleModal('${l.id}', false)">${l.showing_at ? 'Change meeting date' : '+ Set a meeting date'}</button>
-    <button class="btn btn-ghost" style="margin-top:10px;" onclick="requestCallToArrange('${l.id}')">Ask them to call you instead</button>
+    ${l.status==='qualified' && l.showing_at ? `<p class="muted" style="margin-top:10px; font-size:13px;">Showing set for ${new Date(l.showing_at).toLocaleString('en-US', {weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}</p>` : ''}
+    ${l.status==='qualified' ? `<button class="btn btn-ghost" style="margin-top:12px;" onclick="openQualifyModal('${l.id}')">${l.showing_at ? 'Change appointment' : 'Add an appointment day'}</button>` : ''}
     ${l.phone ? `<a class="btn btn-primary" style="margin-top:16px; text-decoration:none;" href="tel:${escapeHtml(l.phone)}">Call ${escapeHtml(l.name.split(' ')[0])}</a>` : ''}
   </div>`;
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
