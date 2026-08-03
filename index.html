@@ -677,6 +677,15 @@ async function submitSchedule(id, setStatus){
   closeModal();
 }
 
+async function requestCallToArrange(id){
+  const { error } = await db.from('leads').update({ call_requested_at: new Date().toISOString() }).eq('id', id);
+  if(error){ showToast(error.message); return; }
+  await loadPrivate();
+  render();
+  closeModal();
+  showToast('They\'ll get a message asking them to call you');
+}
+
 let toastTimer;
 function showToast(msg){
   console.log('[Zunti]', msg);
@@ -1474,6 +1483,7 @@ function openLeadDetail(id){
     </div>
     ${l.showing_at ? `<p class="muted" style="margin-top:10px; font-size:13px;">Meeting set for ${new Date(l.showing_at).toLocaleString('en-US', {weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}</p>` : ''}
     <button class="btn btn-ghost" style="margin-top:12px;" onclick="openScheduleModal('${l.id}', false)">${l.showing_at ? 'Change meeting date' : '+ Set a meeting date'}</button>
+    <button class="btn btn-ghost" style="margin-top:10px;" onclick="requestCallToArrange('${l.id}')">Ask them to call you instead</button>
     ${l.phone ? `<a class="btn btn-primary" style="margin-top:16px; text-decoration:none;" href="tel:${escapeHtml(l.phone)}">Call ${escapeHtml(l.name.split(' ')[0])}</a>` : ''}
   </div>`;
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
